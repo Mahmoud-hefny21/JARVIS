@@ -1,0 +1,82 @@
+{
+  "profile": "isolated UUID profile",
+  "native": true,
+  "results": {
+    "sqliteWriteRead": "VERIFIED",
+    "qaProfileIdentity": "VERIFIED from the selected on-disk SQLite database",
+    "aiAdapterContract": "VERIFIED using synthetic local HTTP fixture; no model inference",
+    "localCommandsDuringPendingAi": "VERIFIED before the held provider was allowed to respond",
+    "busyAdvancedInputPreserved": "VERIFIED",
+    "onlineAiConsentEnforced": "VERIFIED before network request",
+    "weather": "VERIFIED live Open-Meteo request and persisted cache",
+    "ipcRejectsUnauthorizedActions": "VERIFIED",
+    "databaseIntegrity": "VERIFIED",
+    "backup": "jarvis-20261116-072329-102593000.jbackup",
+    "telemetry": {
+      "cpu": 36.830078125,
+      "ramTotal": 8425525248,
+      "diskTotal": 147266105344,
+      "batterySupported": true,
+      "temperatureSupported": false
+    },
+    "speechCapabilities": {
+      "recognizers": [
+        "en-US"
+      ],
+      "voices": [
+        {
+          "language": "en-US",
+          "name": "Microsoft David Desktop"
+        },
+        {
+          "language": "en-US",
+          "name": "Microsoft Zira Desktop"
+        }
+      ]
+    },
+    "security": {
+      "defender": true,
+      "error": null,
+      "firewall": true,
+      "lastScan": "2026-11-13T20:08:43.6610000+02:00",
+      "realTime": true
+    },
+    "tools": [
+      {
+        "installed": true,
+        "name": "VS Code",
+        "running": true
+      },
+      {
+        "installed": true,
+        "name": "Git",
+        "running": false
+      },
+      {
+        "installed": true,
+        "name": "Node.js",
+        "running": true
+      },
+      {
+        "installed": false,
+        "name": "Python",
+        "running": false
+      },
+      {
+        "installed": false,
+        "name": "Docker",
+        "running": false
+      }
+    ],
+    "overdueReminderRecovery": "VERIFIED",
+    "nativeDashboard": "VERIFIED",
+    "persistenceAcrossProcessRestart": "VERIFIED",
+    "reminderDeduplication": "VERIFIED",
+    "allNativeViews": "VERIFIED"
+  },
+  "measurements": {
+    "firstLaunchToVisibleMs": 6313.3454,
+    "nativeWriteRoundTripMs": 6002.141900000002,
+    "secondLaunchToVisibleMs": 3527.7197000000015
+  }
+}

@@ -1,0 +1,67 @@
+/* Usability polish layered over the base HUD styles: readable sizes, clear voice state, chat bubbles. */
+
+/* Sidebar: every page stays reachable on 900 px tall windows. */
+@media (max-height: 960px) {
+  .nav-item{padding-top:9px;padding-bottom:9px}
+  nav{gap:2px}
+}
+
+/* Hints under the command bar were 5-6 px; keep them legible. */
+.command-hint,.command-meta{font-size:10px!important;letter-spacing:.6px}
+.command-hint button{font-size:11px;padding:4px 10px;border:1px solid #1c566d;border-radius:999px;color:#9fdcf0;display:inline-flex;gap:6px;align-items:center}
+.command-hint button[aria-pressed="true"]{border-color:#32d8ff;color:#32d8ff;box-shadow:0 0 12px #32d8ff33}
+
+/* Live voice state above the command bar. */
+.voice-status{display:none;align-items:center;gap:12px;margin:0 auto 10px;width:max-content;max-width:100%;padding:8px 10px 8px 16px;border:1px solid #1d6d88;border-radius:999px;background:#06202ecc;color:#bfeeff;font-size:13px;box-shadow:0 0 24px #32d8ff22}
+body.listening .voice-status,body.thinking .voice-status,body.speaking .voice-status{display:flex}
+.voice-status .meter{width:90px;height:6px;border-radius:3px;background:#0d3346;overflow:hidden}
+.voice-status .meter i{display:block;height:100%;width:calc(8% + var(--audio-level,0) * 92%);background:linear-gradient(90deg,#1fb6e0,#7cf3ff);transition:width .08s linear}
+body:not(.listening) .voice-status .meter{display:none}
+.voice-status .pulse{width:9px;height:9px;border-radius:50%;background:#32d8ff;animation:voice-pulse 1.2s ease-in-out infinite}
+body.thinking:not(.listening) .voice-status .pulse{background:#ffc35a}
+body.speaking .voice-status .pulse{background:#61f2a6}
+.voice-status button{font-size:12px;color:#ffb4b4;border:1px solid #6a2b33;border-radius:999px;padding:4px 12px;background:#2a0f14}
+.voice-status button:hover{background:#3b141b}
+@keyframes voice-pulse{50%{transform:scale(1.5);opacity:.5}}
+body.reduced-motion .voice-status .pulse{animation:none}
+
+/* Chat: bubbles, readable text and quick suggestions. */
+.chat-tools{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.chat-messages{max-width:880px}
+.message{border-bottom:0;padding:10px 0}
+.message>div:last-child{flex:0 1 auto;max-width:min(680px,85%);background:#0a2131;border:1px solid #16455a;border-radius:4px 14px 14px 14px;padding:10px 16px 12px}
+.message.user{flex-direction:row-reverse}
+.message.user>div:last-child{background:#0f2c3d;border-color:#1f5a72;border-radius:14px 4px 14px 14px}
+.message p{font-size:14px;line-height:1.65;margin-top:6px;color:#cfe3ee}
+.suggestions{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:18px}
+.suggestion{font-size:13px;color:#a9e9fb;border:1px solid #1d5d75;background:#08202e;border-radius:999px;padding:8px 14px;cursor:pointer}
+.suggestion:hover,.suggestion:focus-visible{border-color:#32d8ff;color:#fff;background:#0c2e40}
+
+/* Floating holographic reply: answers appear over the dashboard instead of switching pages. */
+.hud-reply{position:fixed;left:50%;bottom:118px;transform:translateX(-50%);z-index:40;width:min(720px,calc(100vw - 32px));padding:14px 18px 16px;border:1px solid #2bc6ef;border-radius:6px;background:linear-gradient(180deg,#051b28f2,#03111bf7);box-shadow:0 0 0 1px #0a3a4d inset,0 0 40px #18c8f040,0 20px 60px #000a;overflow:hidden;animation:hud-in .28s cubic-bezier(.2,.8,.2,1)}
+.hud-reply[hidden]{display:none}
+.hud-reply::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent,#5be7ff22 50%,transparent);height:40%;animation:hud-scan 1.4s ease-out 1;pointer-events:none}
+.hud-reply::after{content:"J.A.R.V.I.S.";position:absolute;top:8px;right:14px;font-size:9px;letter-spacing:3px;color:#3fb7d8}
+.hud-you{font-size:12px;color:#7fa9bd;margin-bottom:6px;padding-right:90px}
+.hud-you::before{content:"YOU  ";color:#4f88a0;letter-spacing:2px;font-size:9px}
+.hud-jarvis{font-size:16px;line-height:1.55;color:#e4f8ff;white-space:pre-wrap;max-height:40vh;overflow:auto;text-shadow:0 0 12px #2fd0ff33}
+.hud-reply.done{border-color:#1b7f9e}
+.hud-thinking{display:inline-flex;gap:6px;padding:6px 0}
+.hud-thinking i{width:8px;height:8px;border-radius:50%;background:#35d6ff;animation:hud-dot 1s infinite ease-in-out}
+.hud-thinking i:nth-child(2){animation-delay:.15s}.hud-thinking i:nth-child(3){animation-delay:.3s}
+@keyframes hud-in{from{opacity:0;transform:translate(-50%,14px) scale(.98)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes hud-scan{from{transform:translateY(-100%)}to{transform:translateY(260%)}}
+@keyframes hud-dot{0%,80%,100%{opacity:.25;transform:scale(.7)}40%{opacity:1;transform:scale(1)}}
+
+/* Live alerts strip: the few things that matter right now. */
+.hud-alerts{display:flex;flex-wrap:wrap;gap:8px;flex:1;justify-content:center;min-width:0}
+.hud-alert{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:#bfe9f7;padding:6px 12px;border:1px solid #1a5870;border-radius:999px;background:#071d2acc;white-space:nowrap;max-width:340px;overflow:hidden;text-overflow:ellipsis;animation:alert-in .4s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i) * 90ms)}
+.hud-alert .icon{width:14px;height:14px;flex-shrink:0;color:#35d6ff}
+.hud-alert.warn{border-color:#8a6420;color:#ffd78a;background:#251a07cc}.hud-alert.warn .icon{color:#ffc35a}
+.hud-alert.critical{border-color:#8c2f39;color:#ffb3ba;background:#2a0c10cc;animation:alert-in .4s both,alert-pulse 2s ease-in-out .5s infinite}.hud-alert.critical .icon{color:#ff6b78}
+@keyframes alert-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@keyframes alert-pulse{50%{box-shadow:0 0 16px #ff4d5e55}}
+body.reduced-motion .hud-reply,body.reduced-motion .hud-reply::before,body.reduced-motion .hud-alert,body.reduced-motion .hud-thinking i{animation:none}
+@media (max-width:900px){.hud-alerts{display:none}.hud-reply{bottom:150px}}
+@media (max-width:1280px),(max-height:820px){.hud-alerts{display:none}}
+.hud-alerts{flex-wrap:nowrap;overflow:hidden;max-height:32px}

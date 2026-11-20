@@ -1,0 +1,6 @@
+{
+  "at": "2026-11-17T01:17:46.861Z",
+  "scope": "optimized Windows release, isolated UUID profile",
+  "results": {},
+  "failure": "TypeError: Cannot read properties of undefined (reading 'locator')"
+}

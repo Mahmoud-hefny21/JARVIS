@@ -1,0 +1,13 @@
+﻿{
+    "fixture":  "Synthetic en-US SAPI WAV, not a microphone, Egyptian Arabic, mixed-language or wake-word test",
+    "engine":  "whisper.cpp b5454 / multilingual base-q5_1",
+    "transcript":  "Jarvis, remember that I prefer local storage. Please show my system status.",
+    "elapsedMs":  3674.8,
+    "sampledPeakWorkingSetMiB":  167.1,
+    "sampledPeakPrivateCommitMiB":  656.9,
+    "samplingMs":  100,
+    "threads":  4,
+    "modelBytes":  59707625,
+    "modelSha256":  "422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898",
+    "modelKeptLoadedAfterExit":  false
+}

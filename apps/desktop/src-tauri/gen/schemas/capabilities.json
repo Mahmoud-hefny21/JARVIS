@@ -1,0 +1,1 @@
+{"main":{"identifier":"main","description":"Only the trusted local main window can access application IPC.","local":true,"windows":["main"],"permissions":["core:default","core:window:allow-is-fullscreen","core:window:allow-set-fullscreen"]}}

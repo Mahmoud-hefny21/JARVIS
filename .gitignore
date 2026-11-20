@@ -1,0 +1,21 @@
+node_modules/
+.build/
+artifacts/
+rustup-init.exe
+dist/
+target/
+.env
+.env.*
+!.env.example
+.data/
+test-results/
+playwright-report/
+*.db
+*.db-shm
+*.db-wal
+*.log
+*.pem
+*.key
+
+# User-approved local speech runtime/models; excluded from source and installer.
+local-voice/

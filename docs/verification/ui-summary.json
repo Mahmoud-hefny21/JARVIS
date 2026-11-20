@@ -1,0 +1,11 @@
+{
+  "at": "2026-11-16T07:20:09.776Z",
+  "command": "bun.cmd run test:ui",
+  "startTime": "2026-11-16T07:17:06.917Z",
+  "duration": 96831.08499999999,
+  "expected": 9,
+  "skipped": 0,
+  "unexpected": 0,
+  "flaky": 0,
+  "exitCode": 0
+}

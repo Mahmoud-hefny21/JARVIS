@@ -1,0 +1,110 @@
+{
+  "at": "2026-11-16T07:28:43.124Z",
+  "profile": "D:\\JARVIS\\.build\\qa\\84df32c0-f743-4b28-9e22-a16c9a40a3dc",
+  "results": {
+    "fileReadAndTraversal": "passed on synthetic native project",
+    "monitors": [
+      {
+        "height": 1080,
+        "key": "-1920,0",
+        "label": "Display 1 · 1920×1080 · 100%",
+        "name": "\\\\.\\DISPLAY2",
+        "primary": false,
+        "scaleFactor": 1,
+        "width": 1920,
+        "workArea": {
+          "height": 1032,
+          "width": 1920,
+          "x": -1920,
+          "y": 0
+        },
+        "x": -1920,
+        "y": 0
+      },
+      {
+        "height": 1080,
+        "key": "0,0",
+        "label": "Display 2 · 1920×1080 · 150% · Primary",
+        "name": "\\\\.\\DISPLAY1",
+        "primary": true,
+        "scaleFactor": 1.5,
+        "width": 1920,
+        "workArea": {
+          "height": 1008,
+          "width": 1920,
+          "x": 0,
+          "y": 0
+        },
+        "x": 0,
+        "y": 0
+      }
+    ],
+    "speech": {
+      "recognizers": [
+        "en-US"
+      ],
+      "voices": [
+        {
+          "language": "en-US",
+          "name": "Microsoft David Desktop"
+        },
+        {
+          "language": "en-US",
+          "name": "Microsoft Zira Desktop"
+        }
+      ]
+    },
+    "directWindowBypassRejected": true,
+    "contextualFileReference": true,
+    "contextualWindowActions": [
+      {
+        "request": "Could you show me Chrome please",
+        "verified": true
+      },
+      {
+        "request": "Put it on monitor two",
+        "verified": true
+      },
+      {
+        "request": "Move it to monitor one",
+        "verified": true
+      },
+      {
+        "request": "Put it on monitor two",
+        "verified": true
+      },
+      {
+        "request": "Move it to monitor one",
+        "verified": true
+      },
+      {
+        "request": "Put it on monitor two",
+        "verified": true
+      },
+      {
+        "request": "Move it to monitor one",
+        "verified": true
+      },
+      {
+        "request": "Put it on monitor two",
+        "verified": true
+      },
+      {
+        "request": "Move it to monitor one",
+        "verified": true
+      },
+      {
+        "request": "Minimize it",
+        "verified": true
+      },
+      {
+        "request": "Restore it",
+        "verified": true
+      }
+    ]
+  },
+  "limitations": [
+    "Only fixed browser window controls were exercised, not browser-page automation.",
+    "Microphone wake-up, audible playback and visual placement/quality on physical displays require manual testing."
+  ]
+}

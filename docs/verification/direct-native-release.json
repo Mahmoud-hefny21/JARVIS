@@ -1,0 +1,24 @@
+{
+  "at": "2026-11-16T07:26:47.822Z",
+  "profile": "isolated UUID QA profile",
+  "checks": {
+    "qaDatabaseMarked": true,
+    "multiStepRoutineTaskWithoutPrompts": true,
+    "copyVerifiedAndOverwriteTraversalRejected": true,
+    "notificationTaskLinkWithoutProjectGrant": true,
+    "highImpactAndIndependentProposalsProtected": true,
+    "scopeAndShellBoundary": true,
+    "realProtectedDialogCancellation": true,
+    "trustedUiCommandWithoutDialog": true,
+    "uiMetadataUpdateWithoutDialog": true,
+    "uiCosmeticPreferencesWithoutDialog": true,
+    "uiCopyWithoutDialog": true,
+    "actualChromeFocusWithoutDialog": true,
+    "contextualFollowupWithoutDialog": true,
+    "untrustedDomEventNotAutoApproved": true,
+    "revokedProjectStopsPreparedAction": true,
+    "taskCancellation": true,
+    "auditNoCapabilityLeakAndIntegrity": true
+  },
+  "directSteps": 6
+}

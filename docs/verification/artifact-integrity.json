@@ -1,0 +1,204 @@
+{
+  "at": "2026-11-18T15:16:24.449Z",
+  "scope": "read-only PE/NSIS integrity and exact local build comparisons; no installer execution",
+  "artifacts": [
+    {
+      "path": "artifacts/JARVIS_0.1.0_x64-setup.exe",
+      "bytes": 2820309,
+      "sha256": "eeffffc6e70e7992e00a4df4fb4902cc49a6f534d94604e9ead05b3ccea68ce5",
+      "modifiedAt": "2026-11-18T15:13:53.433Z",
+      "pe": {
+        "valid": true,
+        "format": "PE32",
+        "machine": "I386",
+        "peOffset": 216,
+        "entryPoint": 13983,
+        "sectionAlignment": 4096,
+        "fileAlignment": 512,
+        "imageSize": 380928,
+        "headersSize": 1024,
+        "sections": [
+          {
+            "name": ".text",
+            "virtualSize": 26398,
+            "rva": 4096,
+            "rawSize": 26624,
+            "rawOffset": 1024,
+            "executable": true
+          },
+          {
+            "name": ".rdata",
+            "virtualSize": 4952,
+            "rva": 32768,
+            "rawSize": 5120,
+            "rawOffset": 27648,
+            "executable": false
+          },
+          {
+            "name": ".data",
+            "virtualSize": 129912,
+            "rva": 40960,
+            "rawSize": 1536,
+            "rawOffset": 32768,
+            "executable": false
+          },
+          {
+            "name": ".ndata",
+            "virtualSize": 188416,
+            "rva": 172032,
+            "rawSize": 0,
+            "rawOffset": 0,
+            "executable": false
+          },
+          {
+            "name": ".rsrc",
+            "virtualSize": 18008,
+            "rva": 360448,
+            "rawSize": 18432,
+            "rawOffset": 34304,
+            "executable": false
+          }
+        ],
+        "rawSectionsEnd": 52736,
+        "overlayBytes": 2767573,
+        "certificateOffset": 0,
+        "certificateSize": 0
+      },
+      "nsis": {
+        "valid": true,
+        "firstHeaderOffset": 52736,
+        "flags": 0,
+        "headerLength": 73612,
+        "archiveBytes": 2767573,
+        "archiveEnd": 2820309,
+        "trailingBytes": 0,
+        "crc32": "e094b86c",
+        "crc32Matches": true,
+        "crcRangeStart": 512,
+        "crcRangeEndExclusive": 2820305
+      }
+    },
+    {
+      "path": "artifacts/JARVIS.exe",
+      "bytes": 7060992,
+      "sha256": "26e5396bb08bca6e2e5f8a94e15bd32070079d678166c034e060e67572bb78c9",
+      "modifiedAt": "2026-11-18T15:13:53.759Z",
+      "pe": {
+        "valid": true,
+        "format": "PE32+",
+        "machine": "AMD64",
+        "peOffset": 240,
+        "entryPoint": 5440180,
+        "sectionAlignment": 4096,
+        "fileAlignment": 512,
+        "imageSize": 7090176,
+        "headersSize": 1024,
+        "sections": [
+          {
+            "name": ".text",
+            "virtualSize": 5579440,
+            "rva": 4096,
+            "rawSize": 5579776,
+            "rawOffset": 1024,
+            "executable": true
+          },
+          {
+            "name": ".rdata",
+            "virtualSize": 1296854,
+            "rva": 5586944,
+            "rawSize": 1296896,
+            "rawOffset": 5580800,
+            "executable": false
+          },
+          {
+            "name": ".data",
+            "virtualSize": 37256,
+            "rva": 6885376,
+            "rawSize": 25600,
+            "rawOffset": 6877696,
+            "executable": false
+          },
+          {
+            "name": ".pdata",
+            "virtualSize": 125700,
+            "rva": 6926336,
+            "rawSize": 125952,
+            "rawOffset": 6903296,
+            "executable": false
+          },
+          {
+            "name": ".rsrc",
+            "virtualSize": 5392,
+            "rva": 7053312,
+            "rawSize": 5632,
+            "rawOffset": 7029248,
+            "executable": false
+          },
+          {
+            "name": ".reloc",
+            "virtualSize": 25632,
+            "rva": 7061504,
+            "rawSize": 26112,
+            "rawOffset": 7034880,
+            "executable": false
+          }
+        ],
+        "rawSectionsEnd": 7060992,
+        "overlayBytes": 0,
+        "certificateOffset": 0,
+        "certificateSize": 0
+      }
+    },
+    {
+      "path": "artifacts/THIRD_PARTY_NOTICES.md",
+      "bytes": 3091918,
+      "sha256": "73d3137287a1484a25c95e5f6c694ed9c7441bd1ba7f3d53d0e940de91ddd849",
+      "modifiedAt": "2026-11-16T03:07:39.550Z"
+    },
+    {
+      "path": "artifacts/dashboard-preview.png",
+      "bytes": 864653,
+      "sha256": "341f7aa8fe027caab1285354be498b49384fb71924f9318b4b5f4f3003f7e4c6",
+      "modifiedAt": "2026-11-16T06:09:31.742Z"
+    },
+    {
+      "path": "artifacts/dashboard-fullscreen-preview.png",
+      "bytes": 929542,
+      "sha256": "8f0fc821d18c2485ef1af8fab2ca493c8918179be0bf40964f7bb3ee537f5409",
+      "modifiedAt": "2026-11-16T06:08:43.771Z"
+    }
+  ],
+  "comparisons": [
+    {
+      "packaged": "artifacts/JARVIS_0.1.0_x64-setup.exe",
+      "original": ".build/target/release/bundle/nsis/JARVIS_0.1.0_x64-setup.exe",
+      "originalBytes": 2820309,
+      "originalSha256": "eeffffc6e70e7992e00a4df4fb4902cc49a6f534d94604e9ead05b3ccea68ce5",
+      "byteIdentical": true
+    },
+    {
+      "packaged": "artifacts/JARVIS.exe",
+      "original": ".build/target/release/jarvis-desktop.exe",
+      "originalBytes": 7060992,
+      "originalSha256": "26e5396bb08bca6e2e5f8a94e15bd32070079d678166c034e060e67572bb78c9",
+      "byteIdentical": true
+    },
+    {
+      "packaged": "artifacts/THIRD_PARTY_NOTICES.md",
+      "original": "docs/THIRD_PARTY_NOTICES.md",
+      "originalBytes": 3091918,
+      "originalSha256": "73d3137287a1484a25c95e5f6c694ed9c7441bd1ba7f3d53d0e940de91ddd849",
+      "byteIdentical": true
+    }
+  ],
+  "limits": [
+    "Structural/CRC checks do not prove malware absence or publisher authenticity.",
+    "Compressed NSIS members were not independently extracted/decompressed."
+  ],
+  "manifest": {
+    "path": "artifacts/SHA256SUMS.txt",
+    "entries": 5,
+    "verified": true,
+    "regenerated": true
+  }
+}

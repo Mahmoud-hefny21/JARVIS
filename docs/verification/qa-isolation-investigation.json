@@ -1,0 +1,10 @@
+{
+  "at": "2026-11-16T07:13:29.757Z",
+  "readOnly": true,
+  "normalRecords": 5,
+  "syntheticLabelCandidates": 0,
+  "exactQaMatches": 0,
+  "qaProfilesCompared": 34,
+  "recordsModified": 0,
+  "conclusion": "No exact QA record duplicates reproduced in the normal profile. Visible QA test windows are now explicitly titled and isolated; no personal records were removed."
+}

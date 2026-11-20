@@ -1,0 +1,1369 @@
+{
+  "at": "2026-11-16T05:51:54.478Z",
+  "scope": "actual Windows outer physical bounds; UUID test profile",
+  "checks": [
+    {
+      "name": "startup",
+      "fullscreen": false,
+      "monitors": [
+        {
+          "height": 1080,
+          "key": "-1920,0",
+          "label": "Display 1 · 1920×1080 · 100%",
+          "name": "\\\\.\\DISPLAY2",
+          "primary": false,
+          "scaleFactor": 1,
+          "width": 1920,
+          "workArea": {
+            "height": 1032,
+            "width": 1920,
+            "x": -1920,
+            "y": 0
+          },
+          "x": -1920,
+          "y": 0
+        },
+        {
+          "height": 1080,
+          "key": "0,0",
+          "label": "Display 2 · 1920×1080 · 150% · Primary",
+          "name": "\\\\.\\DISPLAY1",
+          "primary": true,
+          "scaleFactor": 1.5,
+          "width": 1920,
+          "workArea": {
+            "height": 1008,
+            "width": 1920,
+            "x": 0,
+            "y": 0
+          },
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "outer": {
+        "height": 1008,
+        "width": 1920,
+        "x": 0,
+        "y": 0
+      },
+      "selected": {
+        "height": 1080,
+        "key": "0,0",
+        "label": "Display 2 · 1920×1080 · 150% · Primary",
+        "name": "\\\\.\\DISPLAY1",
+        "primary": true,
+        "scaleFactor": 1.5,
+        "width": 1920,
+        "workArea": {
+          "height": 1008,
+          "width": 1920,
+          "x": 0,
+          "y": 0
+        },
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "name": "selected windowed display",
+      "fullscreen": false,
+      "monitors": [
+        {
+          "height": 1080,
+          "key": "-1920,0",
+          "label": "Display 1 · 1920×1080 · 100%",
+          "name": "\\\\.\\DISPLAY2",
+          "primary": false,
+          "scaleFactor": 1,
+          "width": 1920,
+          "workArea": {
+            "height": 1032,
+            "width": 1920,
+            "x": -1920,
+            "y": 0
+          },
+          "x": -1920,
+          "y": 0
+        },
+        {
+          "height": 1080,
+          "key": "0,0",
+          "label": "Display 2 · 1920×1080 · 150% · Primary",
+          "name": "\\\\.\\DISPLAY1",
+          "primary": true,
+          "scaleFactor": 1.5,
+          "width": 1920,
+          "workArea": {
+            "height": 1008,
+            "width": 1920,
+            "x": 0,
+            "y": 0
+          },
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "outer": {
+        "height": 1008,
+        "width": 1920,
+        "x": -1920,
+        "y": 0
+      },
+      "selected": {
+        "height": 1080,
+        "key": "-1920,0",
+        "label": "Display 1 · 1920×1080 · 100%",
+        "name": "\\\\.\\DISPLAY2",
+        "primary": false,
+        "scaleFactor": 1,
+        "width": 1920,
+        "workArea": {
+          "height": 1032,
+          "width": 1920,
+          "x": -1920,
+          "y": 0
+        },
+        "x": -1920,
+        "y": 0
+      }
+    },
+    {
+      "name": "wake/fullscreen shared path",
+      "fullscreen": true,
+      "monitors": [
+        {
+          "height": 1080,
+          "key": "-1920,0",
+          "label": "Display 1 · 1920×1080 · 100%",
+          "name": "\\\\.\\DISPLAY2",
+          "primary": false,
+          "scaleFactor": 1,
+          "width": 1920,
+          "workArea": {
+            "height": 1032,
+            "width": 1920,
+            "x": -1920,
+            "y": 0
+          },
+          "x": -1920,
+          "y": 0
+        },
+        {
+          "height": 1080,
+          "key": "0,0",
+          "label": "Display 2 · 1920×1080 · 150% · Primary",
+          "name": "\\\\.\\DISPLAY1",
+          "primary": true,
+          "scaleFactor": 1.5,
+          "width": 1920,
+          "workArea": {
+            "height": 1008,
+            "width": 1920,
+            "x": 0,
+            "y": 0
+          },
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "outer": {
+        "height": 1080,
+        "width": 1920,
+        "x": -1920,
+        "y": 0
+      },
+      "selected": {
+        "height": 1080,
+        "key": "-1920,0",
+        "label": "Display 1 · 1920×1080 · 100%",
+        "name": "\\\\.\\DISPLAY2",
+        "primary": false,
+        "scaleFactor": 1,
+        "width": 1920,
+        "workArea": {
+          "height": 1032,
+          "width": 1920,
+          "x": -1920,
+          "y": 0
+        },
+        "x": -1920,
+        "y": 0
+      }
+    },
+    {
+      "name": "Escape restore",
+      "fullscreen": false,
+      "monitors": [
+        {
+          "height": 1080,
+          "key": "-1920,0",
+          "label": "Display 1 · 1920×1080 · 100%",
+          "name": "\\\\.\\DISPLAY2",
+          "primary": false,
+          "scaleFactor": 1,
+          "width": 1920,
+          "workArea": {
+            "height": 1032,
+            "width": 1920,
+            "x": -1920,
+            "y": 0
+          },
+          "x": -1920,
+          "y": 0
+        },
+        {
+          "height": 1080,
+          "key": "0,0",
+          "label": "Display 2 · 1920×1080 · 150% · Primary",
+          "name": "\\\\.\\DISPLAY1",
+          "primary": true,
+          "scaleFactor": 1.5,
+          "width": 1920,
+          "workArea": {
+            "height": 1008,
+            "width": 1920,
+            "x": 0,
+            "y": 0
+          },
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "outer": {
+        "height": 1008,
+        "width": 1920,
+        "x": -1920,
+        "y": 0
+      },
+      "selected": {
+        "height": 1080,
+        "key": "-1920,0",
+        "label": "Display 1 · 1920×1080 · 100%",
+        "name": "\\\\.\\DISPLAY2",
+        "primary": false,
+        "scaleFactor": 1,
+        "width": 1920,
+        "workArea": {
+          "height": 1032,
+          "width": 1920,
+          "x": -1920,
+          "y": 0
+        },
+        "x": -1920,
+        "y": 0
+      }
+    },
+    {
+      "name": "repeat fullscreen",
+      "fullscreen": true,
+      "monitors": [
+        {
+          "height": 1080,
+          "key": "-1920,0",
+          "label": "Display 1 · 1920×1080 · 100%",
+          "name": "\\\\.\\DISPLAY2",
+          "primary": false,
+          "scaleFactor": 1,
+          "width": 1920,
+          "workArea": {
+            "height": 1032,
+            "width": 1920,
+            "x": -1920,
+            "y": 0
+          },
+          "x": -1920,
+          "y": 0
+        },
+        {
+          "height": 1080,
+          "key": "0,0",
+          "label": "Display 2 · 1920×1080 · 150% · Primary",
+          "name": "\\\\.\\DISPLAY1",
+          "primary": true,
+          "scaleFactor": 1.5,
+          "width": 1920,
+          "workArea": {
+            "height": 1008,
+            "width": 1920,
+            "x": 0,
+            "y": 0
+          },
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "outer": {
+        "height": 1080,
+        "width": 1920,
+        "x": -1920,
+        "y": 0
+      },
+      "selected": {
+        "height": 1080,
+        "key": "-1920,0",
+        "label": "Display 1 · 1920×1080 · 100%",
+        "name": "\\\\.\\DISPLAY2",
+        "primary": false,
+        "scaleFactor": 1,
+        "width": 1920,
+        "workArea": {
+          "height": 1032,
+          "width": 1920,
+          "x": -1920,
+          "y": 0
+        },
+        "x": -1920,
+        "y": 0
+      }
+    },
+    {
+      "name": "restore shared path",
+      "fullscreen": false,
+      "monitors": [
+        {
+          "height": 1080,
+          "key": "-1920,0",
+          "label": "Display 1 · 1920×1080 · 100%",
+          "name": "\\\\.\\DISPLAY2",
+          "primary": false,
+          "scaleFactor": 1,
+          "width": 1920,
+          "workArea": {
+            "height": 1032,
+            "width": 1920,
+            "x": -1920,
+            "y": 0
+          },
+          "x": -1920,
+          "y": 0
+        },
+        {
+          "height": 1080,
+          "key": "0,0",
+          "label": "Display 2 · 1920×1080 · 150% · Primary",
+          "name": "\\\\.\\DISPLAY1",
+          "primary": true,
+          "scaleFactor": 1.5,
+          "width": 1920,
+          "workArea": {
+            "height": 1008,
+            "width": 1920,
+            "x": 0,
+            "y": 0
+          },
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "outer": {
+        "height": 1008,
+        "width": 1920,
+        "x": -1920,
+        "y": 0
+      },
+      "selected": {
+        "height": 1080,
+        "key": "-1920,0",
+        "label": "Display 1 · 1920×1080 · 100%",
+        "name": "\\\\.\\DISPLAY2",
+        "primary": false,
+        "scaleFactor": 1,
+        "width": 1920,
+        "workArea": {
+          "height": 1032,
+          "width": 1920,
+          "x": -1920,
+          "y": 0
+        },
+        "x": -1920,
+        "y": 0
+      }
+    },
+    {
+      "name": "minimized restore",
+      "fullscreen": false,
+      "monitors": [
+        {
+          "height": 1080,
+          "key": "-1920,0",
+          "label": "Display 1 · 1920×1080 · 100%",
+          "name": "\\\\.\\DISPLAY2",
+          "primary": false,
+          "scaleFactor": 1,
+          "width": 1920,
+          "workArea": {
+            "height": 1032,
+            "width": 1920,
+            "x": -1920,
+            "y": 0
+          },
+          "x": -1920,
+          "y": 0
+        },
+        {
+          "height": 1080,
+          "key": "0,0",
+          "label": "Display 2 · 1920×1080 · 150% · Primary",
+          "name": "\\\\.\\DISPLAY1",
+          "primary": true,
+          "scaleFactor": 1.5,
+          "width": 1920,
+          "workArea": {
+            "height": 1008,
+            "width": 1920,
+            "x": 0,
+            "y": 0
+          },
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "outer": {
+        "height": 1008,
+        "width": 1920,
+        "x": -1920,
+        "y": 0
+      },
+      "selected": {
+        "height": 1080,
+        "key": "-1920,0",
+        "label": "Display 1 · 1920×1080 · 100%",
+        "name": "\\\\.\\DISPLAY2",
+        "primary": false,
+        "scaleFactor": 1,
+        "width": 1920,
+        "workArea": {
+          "height": 1032,
+          "width": 1920,
+          "x": -1920,
+          "y": 0
+        },
+        "x": -1920,
+        "y": 0
+      }
+    },
+    {
+      "name": "hidden reveal shared tray path",
+      "fullscreen": false,
+      "monitors": [
+        {
+          "height": 1080,
+          "key": "-1920,0",
+          "label": "Display 1 · 1920×1080 · 100%",
+          "name": "\\\\.\\DISPLAY2",
+          "primary": false,
+          "scaleFactor": 1,
+          "width": 1920,
+          "workArea": {
+            "height": 1032,
+            "width": 1920,
+            "x": -1920,
+            "y": 0
+          },
+          "x": -1920,
+          "y": 0
+        },
+        {
+          "height": 1080,
+          "key": "0,0",
+          "label": "Display 2 · 1920×1080 · 150% · Primary",
+          "name": "\\\\.\\DISPLAY1",
+          "primary": true,
+          "scaleFactor": 1.5,
+          "width": 1920,
+          "workArea": {
+            "height": 1008,
+            "width": 1920,
+            "x": 0,
+            "y": 0
+          },
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "outer": {
+        "height": 1008,
+        "width": 1920,
+        "x": -1920,
+        "y": 0
+      },
+      "selected": {
+        "height": 1080,
+        "key": "-1920,0",
+        "label": "Display 1 · 1920×1080 · 100%",
+        "name": "\\\\.\\DISPLAY2",
+        "primary": false,
+        "scaleFactor": 1,
+        "width": 1920,
+        "workArea": {
+          "height": 1032,
+          "width": 1920,
+          "x": -1920,
+          "y": 0
+        },
+        "x": -1920,
+        "y": 0
+      }
+    },
+    {
+      "name": "automatic offscreen repair",
+      "fullscreen": false,
+      "monitors": [
+        {
+          "height": 1080,
+          "key": "-1920,0",
+          "label": "Display 1 · 1920×1080 · 100%",
+          "name": "\\\\.\\DISPLAY2",
+          "primary": false,
+          "scaleFactor": 1,
+          "width": 1920,
+          "workArea": {
+            "height": 1032,
+            "width": 1920,
+            "x": -1920,
+            "y": 0
+          },
+          "x": -1920,
+          "y": 0
+        },
+        {
+          "height": 1080,
+          "key": "0,0",
+          "label": "Display 2 · 1920×1080 · 150% · Primary",
+          "name": "\\\\.\\DISPLAY1",
+          "primary": true,
+          "scaleFactor": 1.5,
+          "width": 1920,
+          "workArea": {
+            "height": 1008,
+            "width": 1920,
+            "x": 0,
+            "y": 0
+          },
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "outer": {
+        "height": 1008,
+        "width": 1920,
+        "x": -1920,
+        "y": 0
+      },
+      "selected": {
+        "height": 1080,
+        "key": "-1920,0",
+        "label": "Display 1 · 1920×1080 · 100%",
+        "name": "\\\\.\\DISPLAY2",
+        "primary": false,
+        "scaleFactor": 1,
+        "width": 1920,
+        "workArea": {
+          "height": 1032,
+          "width": 1920,
+          "x": -1920,
+          "y": 0
+        },
+        "x": -1920,
+        "y": 0
+      }
+    },
+    {
+      "name": "selected windowed display",
+      "fullscreen": false,
+      "monitors": [
+        {
+          "height": 1080,
+          "key": "-1920,0",
+          "label": "Display 1 · 1920×1080 · 100%",
+          "name": "\\\\.\\DISPLAY2",
+          "primary": false,
+          "scaleFactor": 1,
+          "width": 1920,
+          "workArea": {
+            "height": 1032,
+            "width": 1920,
+            "x": -1920,
+            "y": 0
+          },
+          "x": -1920,
+          "y": 0
+        },
+        {
+          "height": 1080,
+          "key": "0,0",
+          "label": "Display 2 · 1920×1080 · 150% · Primary",
+          "name": "\\\\.\\DISPLAY1",
+          "primary": true,
+          "scaleFactor": 1.5,
+          "width": 1920,
+          "workArea": {
+            "height": 1008,
+            "width": 1920,
+            "x": 0,
+            "y": 0
+          },
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "outer": {
+        "height": 1008,
+        "width": 1920,
+        "x": 0,
+        "y": 0
+      },
+      "selected": {
+        "height": 1080,
+        "key": "0,0",
+        "label": "Display 2 · 1920×1080 · 150% · Primary",
+        "name": "\\\\.\\DISPLAY1",
+        "primary": true,
+        "scaleFactor": 1.5,
+        "width": 1920,
+        "workArea": {
+          "height": 1008,
+          "width": 1920,
+          "x": 0,
+          "y": 0
+        },
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "name": "wake/fullscreen shared path",
+      "fullscreen": true,
+      "monitors": [
+        {
+          "height": 1080,
+          "key": "-1920,0",
+          "label": "Display 1 · 1920×1080 · 100%",
+          "name": "\\\\.\\DISPLAY2",
+          "primary": false,
+          "scaleFactor": 1,
+          "width": 1920,
+          "workArea": {
+            "height": 1032,
+            "width": 1920,
+            "x": -1920,
+            "y": 0
+          },
+          "x": -1920,
+          "y": 0
+        },
+        {
+          "height": 1080,
+          "key": "0,0",
+          "label": "Display 2 · 1920×1080 · 150% · Primary",
+          "name": "\\\\.\\DISPLAY1",
+          "primary": true,
+          "scaleFactor": 1.5,
+          "width": 1920,
+          "workArea": {
+            "height": 1008,
+            "width": 1920,
+            "x": 0,
+            "y": 0
+          },
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "outer": {
+        "height": 1080,
+        "width": 1920,
+        "x": 0,
+        "y": 0
+      },
+      "selected": {
+        "height": 1080,
+        "key": "0,0",
+        "label": "Display 2 · 1920×1080 · 150% · Primary",
+        "name": "\\\\.\\DISPLAY1",
+        "primary": true,
+        "scaleFactor": 1.5,
+        "width": 1920,
+        "workArea": {
+          "height": 1008,
+          "width": 1920,
+          "x": 0,
+          "y": 0
+        },
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "name": "Escape restore",
+      "fullscreen": false,
+      "monitors": [
+        {
+          "height": 1080,
+          "key": "-1920,0",
+          "label": "Display 1 · 1920×1080 · 100%",
+          "name": "\\\\.\\DISPLAY2",
+          "primary": false,
+          "scaleFactor": 1,
+          "width": 1920,
+          "workArea": {
+            "height": 1032,
+            "width": 1920,
+            "x": -1920,
+            "y": 0
+          },
+          "x": -1920,
+          "y": 0
+        },
+        {
+          "height": 1080,
+          "key": "0,0",
+          "label": "Display 2 · 1920×1080 · 150% · Primary",
+          "name": "\\\\.\\DISPLAY1",
+          "primary": true,
+          "scaleFactor": 1.5,
+          "width": 1920,
+          "workArea": {
+            "height": 1008,
+            "width": 1920,
+            "x": 0,
+            "y": 0
+          },
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "outer": {
+        "height": 1008,
+        "width": 1920,
+        "x": 0,
+        "y": 0
+      },
+      "selected": {
+        "height": 1080,
+        "key": "0,0",
+        "label": "Display 2 · 1920×1080 · 150% · Primary",
+        "name": "\\\\.\\DISPLAY1",
+        "primary": true,
+        "scaleFactor": 1.5,
+        "width": 1920,
+        "workArea": {
+          "height": 1008,
+          "width": 1920,
+          "x": 0,
+          "y": 0
+        },
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "name": "repeat fullscreen",
+      "fullscreen": true,
+      "monitors": [
+        {
+          "height": 1080,
+          "key": "-1920,0",
+          "label": "Display 1 · 1920×1080 · 100%",
+          "name": "\\\\.\\DISPLAY2",
+          "primary": false,
+          "scaleFactor": 1,
+          "width": 1920,
+          "workArea": {
+            "height": 1032,
+            "width": 1920,
+            "x": -1920,
+            "y": 0
+          },
+          "x": -1920,
+          "y": 0
+        },
+        {
+          "height": 1080,
+          "key": "0,0",
+          "label": "Display 2 · 1920×1080 · 150% · Primary",
+          "name": "\\\\.\\DISPLAY1",
+          "primary": true,
+          "scaleFactor": 1.5,
+          "width": 1920,
+          "workArea": {
+            "height": 1008,
+            "width": 1920,
+            "x": 0,
+            "y": 0
+          },
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "outer": {
+        "height": 1080,
+        "width": 1920,
+        "x": 0,
+        "y": 0
+      },
+      "selected": {
+        "height": 1080,
+        "key": "0,0",
+        "label": "Display 2 · 1920×1080 · 150% · Primary",
+        "name": "\\\\.\\DISPLAY1",
+        "primary": true,
+        "scaleFactor": 1.5,
+        "width": 1920,
+        "workArea": {
+          "height": 1008,
+          "width": 1920,
+          "x": 0,
+          "y": 0
+        },
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "name": "restore shared path",
+      "fullscreen": false,
+      "monitors": [
+        {
+          "height": 1080,
+          "key": "-1920,0",
+          "label": "Display 1 · 1920×1080 · 100%",
+          "name": "\\\\.\\DISPLAY2",
+          "primary": false,
+          "scaleFactor": 1,
+          "width": 1920,
+          "workArea": {
+            "height": 1032,
+            "width": 1920,
+            "x": -1920,
+            "y": 0
+          },
+          "x": -1920,
+          "y": 0
+        },
+        {
+          "height": 1080,
+          "key": "0,0",
+          "label": "Display 2 · 1920×1080 · 150% · Primary",
+          "name": "\\\\.\\DISPLAY1",
+          "primary": true,
+          "scaleFactor": 1.5,
+          "width": 1920,
+          "workArea": {
+            "height": 1008,
+            "width": 1920,
+            "x": 0,
+            "y": 0
+          },
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "outer": {
+        "height": 1008,
+        "width": 1920,
+        "x": 0,
+        "y": 0
+      },
+      "selected": {
+        "height": 1080,
+        "key": "0,0",
+        "label": "Display 2 · 1920×1080 · 150% · Primary",
+        "name": "\\\\.\\DISPLAY1",
+        "primary": true,
+        "scaleFactor": 1.5,
+        "width": 1920,
+        "workArea": {
+          "height": 1008,
+          "width": 1920,
+          "x": 0,
+          "y": 0
+        },
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "name": "minimized restore",
+      "fullscreen": false,
+      "monitors": [
+        {
+          "height": 1080,
+          "key": "-1920,0",
+          "label": "Display 1 · 1920×1080 · 100%",
+          "name": "\\\\.\\DISPLAY2",
+          "primary": false,
+          "scaleFactor": 1,
+          "width": 1920,
+          "workArea": {
+            "height": 1032,
+            "width": 1920,
+            "x": -1920,
+            "y": 0
+          },
+          "x": -1920,
+          "y": 0
+        },
+        {
+          "height": 1080,
+          "key": "0,0",
+          "label": "Display 2 · 1920×1080 · 150% · Primary",
+          "name": "\\\\.\\DISPLAY1",
+          "primary": true,
+          "scaleFactor": 1.5,
+          "width": 1920,
+          "workArea": {
+            "height": 1008,
+            "width": 1920,
+            "x": 0,
+            "y": 0
+          },
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "outer": {
+        "height": 1008,
+        "width": 1920,
+        "x": 0,
+        "y": 0
+      },
+      "selected": {
+        "height": 1080,
+        "key": "0,0",
+        "label": "Display 2 · 1920×1080 · 150% · Primary",
+        "name": "\\\\.\\DISPLAY1",
+        "primary": true,
+        "scaleFactor": 1.5,
+        "width": 1920,
+        "workArea": {
+          "height": 1008,
+          "width": 1920,
+          "x": 0,
+          "y": 0
+        },
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "name": "hidden reveal shared tray path",
+      "fullscreen": false,
+      "monitors": [
+        {
+          "height": 1080,
+          "key": "-1920,0",
+          "label": "Display 1 · 1920×1080 · 100%",
+          "name": "\\\\.\\DISPLAY2",
+          "primary": false,
+          "scaleFactor": 1,
+          "width": 1920,
+          "workArea": {
+            "height": 1032,
+            "width": 1920,
+            "x": -1920,
+            "y": 0
+          },
+          "x": -1920,
+          "y": 0
+        },
+        {
+          "height": 1080,
+          "key": "0,0",
+          "label": "Display 2 · 1920×1080 · 150% · Primary",
+          "name": "\\\\.\\DISPLAY1",
+          "primary": true,
+          "scaleFactor": 1.5,
+          "width": 1920,
+          "workArea": {
+            "height": 1008,
+            "width": 1920,
+            "x": 0,
+            "y": 0
+          },
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "outer": {
+        "height": 1008,
+        "width": 1920,
+        "x": 0,
+        "y": 0
+      },
+      "selected": {
+        "height": 1080,
+        "key": "0,0",
+        "label": "Display 2 · 1920×1080 · 150% · Primary",
+        "name": "\\\\.\\DISPLAY1",
+        "primary": true,
+        "scaleFactor": 1.5,
+        "width": 1920,
+        "workArea": {
+          "height": 1008,
+          "width": 1920,
+          "x": 0,
+          "y": 0
+        },
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "name": "automatic offscreen repair",
+      "fullscreen": false,
+      "monitors": [
+        {
+          "height": 1080,
+          "key": "-1920,0",
+          "label": "Display 1 · 1920×1080 · 100%",
+          "name": "\\\\.\\DISPLAY2",
+          "primary": false,
+          "scaleFactor": 1,
+          "width": 1920,
+          "workArea": {
+            "height": 1032,
+            "width": 1920,
+            "x": -1920,
+            "y": 0
+          },
+          "x": -1920,
+          "y": 0
+        },
+        {
+          "height": 1080,
+          "key": "0,0",
+          "label": "Display 2 · 1920×1080 · 150% · Primary",
+          "name": "\\\\.\\DISPLAY1",
+          "primary": true,
+          "scaleFactor": 1.5,
+          "width": 1920,
+          "workArea": {
+            "height": 1008,
+            "width": 1920,
+            "x": 0,
+            "y": 0
+          },
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "outer": {
+        "height": 1008,
+        "width": 1920,
+        "x": 0,
+        "y": 0
+      },
+      "selected": {
+        "height": 1080,
+        "key": "0,0",
+        "label": "Display 2 · 1920×1080 · 150% · Primary",
+        "name": "\\\\.\\DISPLAY1",
+        "primary": true,
+        "scaleFactor": 1.5,
+        "width": 1920,
+        "workArea": {
+          "height": 1008,
+          "width": 1920,
+          "x": 0,
+          "y": 0
+        },
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "name": "unavailable selected monitor falls back",
+      "fullscreen": true,
+      "monitors": [
+        {
+          "height": 1080,
+          "key": "-1920,0",
+          "label": "Display 1 · 1920×1080 · 100%",
+          "name": "\\\\.\\DISPLAY2",
+          "primary": false,
+          "scaleFactor": 1,
+          "width": 1920,
+          "workArea": {
+            "height": 1032,
+            "width": 1920,
+            "x": -1920,
+            "y": 0
+          },
+          "x": -1920,
+          "y": 0
+        },
+        {
+          "height": 1080,
+          "key": "0,0",
+          "label": "Display 2 · 1920×1080 · 150% · Primary",
+          "name": "\\\\.\\DISPLAY1",
+          "primary": true,
+          "scaleFactor": 1.5,
+          "width": 1920,
+          "workArea": {
+            "height": 1008,
+            "width": 1920,
+            "x": 0,
+            "y": 0
+          },
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "outer": {
+        "height": 1080,
+        "width": 1920,
+        "x": 0,
+        "y": 0
+      },
+      "selected": {
+        "height": 1080,
+        "key": "0,0",
+        "label": "Display 2 · 1920×1080 · 150% · Primary",
+        "name": "\\\\.\\DISPLAY1",
+        "primary": true,
+        "scaleFactor": 1.5,
+        "width": 1920,
+        "workArea": {
+          "height": 1008,
+          "width": 1920,
+          "x": 0,
+          "y": 0
+        },
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "name": "fallback windowed",
+      "fullscreen": false,
+      "monitors": [
+        {
+          "height": 1080,
+          "key": "-1920,0",
+          "label": "Display 1 · 1920×1080 · 100%",
+          "name": "\\\\.\\DISPLAY2",
+          "primary": false,
+          "scaleFactor": 1,
+          "width": 1920,
+          "workArea": {
+            "height": 1032,
+            "width": 1920,
+            "x": -1920,
+            "y": 0
+          },
+          "x": -1920,
+          "y": 0
+        },
+        {
+          "height": 1080,
+          "key": "0,0",
+          "label": "Display 2 · 1920×1080 · 150% · Primary",
+          "name": "\\\\.\\DISPLAY1",
+          "primary": true,
+          "scaleFactor": 1.5,
+          "width": 1920,
+          "workArea": {
+            "height": 1008,
+            "width": 1920,
+            "x": 0,
+            "y": 0
+          },
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "outer": {
+        "height": 1008,
+        "width": 1920,
+        "x": 0,
+        "y": 0
+      },
+      "selected": {
+        "height": 1080,
+        "key": "0,0",
+        "label": "Display 2 · 1920×1080 · 150% · Primary",
+        "name": "\\\\.\\DISPLAY1",
+        "primary": true,
+        "scaleFactor": 1.5,
+        "width": 1920,
+        "workArea": {
+          "height": 1008,
+          "width": 1920,
+          "x": 0,
+          "y": 0
+        },
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "name": "persist selected display",
+      "fullscreen": false,
+      "monitors": [
+        {
+          "height": 1080,
+          "key": "-1920,0",
+          "label": "Display 1 · 1920×1080 · 100%",
+          "name": "\\\\.\\DISPLAY2",
+          "primary": false,
+          "scaleFactor": 1,
+          "width": 1920,
+          "workArea": {
+            "height": 1032,
+            "width": 1920,
+            "x": -1920,
+            "y": 0
+          },
+          "x": -1920,
+          "y": 0
+        },
+        {
+          "height": 1080,
+          "key": "0,0",
+          "label": "Display 2 · 1920×1080 · 150% · Primary",
+          "name": "\\\\.\\DISPLAY1",
+          "primary": true,
+          "scaleFactor": 1.5,
+          "width": 1920,
+          "workArea": {
+            "height": 1008,
+            "width": 1920,
+            "x": 0,
+            "y": 0
+          },
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "outer": {
+        "height": 1008,
+        "width": 1920,
+        "x": -1920,
+        "y": 0
+      },
+      "selected": {
+        "height": 1080,
+        "key": "-1920,0",
+        "label": "Display 1 · 1920×1080 · 100%",
+        "name": "\\\\.\\DISPLAY2",
+        "primary": false,
+        "scaleFactor": 1,
+        "width": 1920,
+        "workArea": {
+          "height": 1032,
+          "width": 1920,
+          "x": -1920,
+          "y": 0
+        },
+        "x": -1920,
+        "y": 0
+      }
+    },
+    {
+      "name": "startup after saved selection",
+      "fullscreen": false,
+      "monitors": [
+        {
+          "height": 1080,
+          "key": "-1920,0",
+          "label": "Display 1 · 1920×1080 · 100%",
+          "name": "\\\\.\\DISPLAY2",
+          "primary": false,
+          "scaleFactor": 1,
+          "width": 1920,
+          "workArea": {
+            "height": 1032,
+            "width": 1920,
+            "x": -1920,
+            "y": 0
+          },
+          "x": -1920,
+          "y": 0
+        },
+        {
+          "height": 1080,
+          "key": "0,0",
+          "label": "Display 2 · 1920×1080 · 150% · Primary",
+          "name": "\\\\.\\DISPLAY1",
+          "primary": true,
+          "scaleFactor": 1.5,
+          "width": 1920,
+          "workArea": {
+            "height": 1008,
+            "width": 1920,
+            "x": 0,
+            "y": 0
+          },
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "outer": {
+        "height": 1032,
+        "width": 1920,
+        "x": -1920,
+        "y": 0
+      },
+      "selected": {
+        "height": 1080,
+        "key": "-1920,0",
+        "label": "Display 1 · 1920×1080 · 100%",
+        "name": "\\\\.\\DISPLAY2",
+        "primary": false,
+        "scaleFactor": 1,
+        "width": 1920,
+        "workArea": {
+          "height": 1032,
+          "width": 1920,
+          "x": -1920,
+          "y": 0
+        },
+        "x": -1920,
+        "y": 0
+      }
+    }
+  ],
+  "limitations": [
+    "Single/three-monitor layouts and disconnect are synthetic regression cases; physical topology is not changed.",
+    "Real microphone wake and tray-menu clicking require human verification; their shared native placement path is exercised."
+  ],
+  "monitors": [
+    {
+      "height": 1080,
+      "key": "-1920,0",
+      "label": "Display 1 · 1920×1080 · 100%",
+      "name": "\\\\.\\DISPLAY2",
+      "primary": false,
+      "scaleFactor": 1,
+      "width": 1920,
+      "workArea": {
+        "height": 1032,
+        "width": 1920,
+        "x": -1920,
+        "y": 0
+      },
+      "x": -1920,
+      "y": 0
+    },
+    {
+      "height": 1080,
+      "key": "0,0",
+      "label": "Display 2 · 1920×1080 · 150% · Primary",
+      "name": "\\\\.\\DISPLAY1",
+      "primary": true,
+      "scaleFactor": 1.5,
+      "width": 1920,
+      "workArea": {
+        "height": 1008,
+        "width": 1920,
+        "x": 0,
+        "y": 0
+      },
+      "x": 0,
+      "y": 0
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "at": "2026-11-15T07:21:04.546Z",
+  "scope": "Measured assets and isolated native SQLite benchmark; not an idle-memory or speech-quality claim.",
+  "assets": [
+    {
+      "name": "index-CzJhnYd0.js",
+      "bytes": 167295,
+      "gzipBytes": 50450
+    },
+    {
+      "name": "index-DktmgwVS.css",
+      "bytes": 59901,
+      "gzipBytes": 12168
+    }
+  ],
+  "nativeDatabase": {
+    "databaseFileBytesAfterCheckpoint": 663552,
+    "profile": "debug",
+    "readAndDeserializePage500Ms": 36.674699999999994,
+    "syntheticRecords": 1000,
+    "transactionInsert1000Ms": 404.4332
+  },
+  "assetsMeasuredAt": "2026-11-15T14:19:35.374Z"
+}

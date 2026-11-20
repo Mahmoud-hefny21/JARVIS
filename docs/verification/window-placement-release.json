@@ -1,0 +1,10 @@
+{
+  "at": "2026-11-16T21:22:07.290Z",
+  "scope": "actual Windows outer physical bounds; UUID test profile",
+  "checks": [],
+  "limitations": [
+    "Single/three-monitor layouts and disconnect are synthetic regression cases; physical topology is not changed.",
+    "Real microphone wake and tray-menu clicking require human verification; their shared native placement path is exercised."
+  ],
+  "failure": "Error: Native WebView2 did not create a page"
+}

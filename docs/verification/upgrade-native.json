@@ -1,0 +1,33 @@
+{
+  "at": "2026-11-16T07:20:29.006Z",
+  "scope": "real native IPC and native dialog interaction; isolated UUID profile; no human account/microphone",
+  "results": {
+    "unguardedWritesRejected": true,
+    "cancelLeavesDataUnchanged": true,
+    "scopeAndReplayEnforced": true,
+    "conflictMessage": "Error: page.evaluate: Resource changed after review; prepare a fresh plan",
+    "concurrentChangeRejected": true,
+    "reviewedEditAndTraversalBoundary": true,
+    "onlyReadOnlySchedules": true,
+    "diagnostics": {
+      "approvedFolderCount": 1,
+      "automationCount": 0,
+      "backupError": null,
+      "integrity": "ok",
+      "interruptedActions": 0,
+      "lastBackup": "2026-11-16T07:20:53.772906+00:00",
+      "networkNeededForLocalRecords": false,
+      "pendingApprovalsSurviveRestart": false,
+      "readOnlyByDefault": true,
+      "schedulerError": null,
+      "schemaVersion": 2
+    },
+    "codex": {
+      "connected": false,
+      "inferenceVerified": false,
+      "installed": true
+    },
+    "chatgptConsentBeforeInference": true,
+    "restartInvalidatesApprovalsAndRecoversOnlyInterrupted": true
+  }
+}

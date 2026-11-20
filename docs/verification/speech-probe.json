@@ -1,0 +1,9 @@
+﻿{
+    "fixture":  "synthetic offline audio, no microphone or playback",
+    "voice":  "Microsoft David Desktop",
+    "language":  "en-US",
+    "recognized":  "JARVIS",
+    "confidence":  0.9445083,
+    "ttsRenderToWaveMs":  77.971,
+    "recognizeFromWaveMs":  198.47140000000002
+}

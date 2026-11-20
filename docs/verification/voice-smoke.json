@@ -1,0 +1,7 @@
+{
+  "at": "2026-11-16T20:37:12.630Z",
+  "profile": "isolated UUID QA",
+  "engine": "Piper standalone",
+  "results": {},
+  "failure": "Error: Timed out waiting for the isolated JARVIS window and page."
+}

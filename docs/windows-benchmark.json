@@ -1,0 +1,12 @@
+{
+  "at": "2026-11-16T02:59:20.832Z",
+  "profile": "optimized release, isolated SQLite profile; microphone and AI models disabled",
+  "limits": [
+    "Launch timing includes CDP attachment; OS file cache was not flushed.",
+    "Chrome workload is an isolated blank headless Chrome; VS Code is the existing IDE.",
+    "Working-set sums include shared pages; private commit is not the same as resident RAM.",
+    "CPU is normalized to total logical-processor capacity over the recorded interval."
+  ],
+  "measurements": {},
+  "failure": "Error: browserType.connectOverCDP: connect ECONNREFUSED 127.0.0.1:9224\nCall log:\n\u001b[2m  - <ws preparing> retrieving websocket url from http://127.0.0.1:9224\u001b[22m\n"
+}

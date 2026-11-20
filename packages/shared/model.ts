@@ -1,0 +1,173 @@
+import { z } from 'zod';
+export const Kind = z.enum(['task', 'memory', 'project', 'event', 'message', 'activity', 'notification', 'draft']);
+export const RecordSchema = z.object({
+  id: z.uuid(), kind: Kind, title: z.string().trim().min(1).max(240), body: z.string().max(32000).default(''),
+  createdAt: z.iso.datetime({offset:true}), updatedAt: z.iso.datetime({offset:true}), done: z.boolean().default(false),
+  priority: z.enum(['low', 'medium', 'high']).default('medium'), dueAt: z.string().max(40).default(''),
+  endAt:z.string().max(40).default(''),allDay:z.boolean().default(false),
+  recurrence: z.enum(['none', 'daily', 'weekly', 'monthly']).default('none'), projectId: z.union([z.uuid(), z.literal('')]).default(''),
+  role: z.enum(['user', 'assistant', '']).default(''), notifiedAt: z.string().max(40).default(''),
+});
+export type Entry = z.infer<typeof RecordSchema>;
+export type EntryKind = Entry['kind'];
+export const WeatherSchema=z.object({temperature:z.number().finite().min(-150).max(150),description:z.string().max(160),at:z.iso.datetime({offset:true}),forecast:z.string().max(16000).optional()});
+const WorkspacePlacementSchema=z.object({application:z.enum(['chrome','vscode','jarvis']),monitor:z.enum(['one','two','three','1','2','3','left','center','right'])});
+export const WorkspacePresetSchema=z.object({id:z.uuid(),name:z.string().trim().min(1).max(60),placements:z.array(WorkspacePlacementSchema).min(1).max(3)}).refine(p=>new Set(p.placements.map(x=>x.application)).size===p.placements.length,'An application may appear only once in a workspace');
+export type WorkspacePreset=z.infer<typeof WorkspacePresetSchema>;
+export const OverviewPanelIdSchema=z.enum(['profile','system-resources','security','development-tools','briefing','projects','schedule','tasks','activity','priority','research']);
+export type OverviewPanelId=z.infer<typeof OverviewPanelIdSchema>;
+export const OverviewLayoutSchema=z.object({
+  version:z.literal(1).default(1),
+  sides:z.partialRecord(OverviewPanelIdSchema,z.enum(['left','right'])).default({}),
+  order:z.array(OverviewPanelIdSchema).max(11).refine(ids=>new Set(ids).size===ids.length,'Overview panel order must be unique').default([]),
+  pinned:OverviewPanelIdSchema.nullable().default(null),
+  hidden:z.boolean().default(false),
+  extras:z.array(z.enum(['activity','priority','research'])).max(3).refine(ids=>new Set(ids).size===ids.length,'Overview panels must be unique').default([]),
+}).strict().default({version:1,sides:{},order:[],pinned:null,hidden:false,extras:[]});
+export type OverviewLayout=z.infer<typeof OverviewLayoutSchema>;
+export const SettingsSchema = z.object({
+  name: z.string().trim().min(1).max(60).default('Sir'), role: z.string().max(100).default('Personal workspace'),
+  interests: z.string().max(240).default('Development, learning, and everything in between.'),
+  lowPower: z.boolean().default(false), reducedMotion: z.boolean().default(false), dnd: z.boolean().default(false),
+  quietStart: z.number().int().min(0).max(23).default(22), quietEnd: z.number().int().min(0).max(23).default(7),
+  sttEngine:z.enum(['sapi','whisper']).default('sapi'),
+  wakeWordEnabled:z.boolean().default(true),
+  ttsEngine:z.enum(['windows','piper']).default('windows'), piperExecutable:z.string().max(320).default(''), piperModel:z.string().max(320).default(''), piperConfig:z.string().max(320).default(''),
+  language: z.enum(['en-US', 'en-GB', 'ar-EG']).default('en-US'), speak: z.boolean().default(false), voice: z.string().max(200).default(''),
+  latitude: z.number().min(-90).max(90).default(30.0444), longitude: z.number().min(-180).max(180).default(31.2357),
+  location: z.string().max(80).default('Cairo'), weatherEnabled: z.boolean().default(false),
+  aiMode: z.enum(['compatible','chatgpt','claude','hybrid']).default('compatible'),
+  aiUrl: z.string().max(300).default(''), aiModel: z.string().max(100).default(''), onlineAiConsent: z.boolean().default(false),
+  googleClientId: z.string().max(240).default(''), backupEnabled: z.boolean().default(true), backupKeep: z.number().int().min(1).max(30).default(7),
+  logRetentionDays: z.number().int().min(7).max(365).default(30), briefingHour: z.number().int().min(0).max(23).default(8), briefingEnabled: z.boolean().default(false),
+  autostart: z.boolean().default(false), minimizeToTray: z.boolean().default(true),
+  // Stable across display reconnects: physical monitor origin in Windows coordinates.
+  monitorKey: z.string().max(32).default('primary'),
+  excludedPaths: z.array(z.string().trim().min(3).max(320)).max(32).default([]),
+  workspacePresets: z.array(WorkspacePresetSchema).max(8).default([]).refine(p=>new Set(p.map(x=>x.name.toLowerCase())).size===p.length,'Workspace names must be unique'),
+  overviewLayout:OverviewLayoutSchema,
+});
+export type Settings = z.infer<typeof SettingsSchema>;
+export const defaults = SettingsSchema.parse({});
+export function createEntry(kind: EntryKind, values: Partial<Entry> = {}): Entry {
+  const now = new Date().toISOString();
+  return RecordSchema.parse({ id: crypto.randomUUID(), kind, title: 'Untitled', createdAt: now, updatedAt: now, ...values });
+}
+export function quiet(settings: Settings, now = new Date()) {
+  if (settings.dnd) return true;
+  const h = now.getHours();
+  return settings.quietStart === settings.quietEnd ? false : settings.quietStart < settings.quietEnd ? h >= settings.quietStart && h < settings.quietEnd : h >= settings.quietStart || h < settings.quietEnd;
+}
+// Quiet hours suppress unattended speech only. A user speaking to JARVIS is an
+// explicit request for a spoken answer and should never be silently ignored.
+export function shouldSpeakResponse(settings: Settings, directVoiceRequest = false, now = new Date()) {
+  return directVoiceRequest || (settings.speak && !quiet(settings, now));
+}
+export function voiceStopRecovery(wakeRequested: boolean, mode: 'wake' | 'ptt' | ''): 'rearm' | 'attention' | 'idle' {
+  if (!wakeRequested) return 'idle';
+  return mode === 'ptt' ? 'rearm' : 'attention';
+}
+export function shouldRetryWithWhisper(sttEngine: 'sapi' | 'whisper', installed: boolean, attempted: boolean): boolean {
+  return sttEngine === 'sapi' && installed && !attempted;
+}
+export function shouldUseWhisperForDictation(sttEngine: 'sapi' | 'whisper', language: string, installedRecognizers: string[], whisperInstalled: boolean): boolean {
+  if (!whisperInstalled) return false;
+  if (sttEngine === 'whisper') return true;
+  return !installedRecognizers.includes(language);
+}
+export function spokenFailureMessage(error: unknown): string {
+  const message=(error instanceof Error?error.message:String(error)).replace(/\s+/g,' ').trim();
+  return (message||'The request could not be completed.').slice(0,320);
+}
+export function nextDue(due: string, recurrence: Entry['recurrence'], now = new Date()): string {
+  const d = new Date(due);
+  if (!Number.isFinite(d.getTime()) || recurrence === 'none') return '';
+  const anchorDay = d.getDate();
+  do { if (recurrence === 'monthly') { d.setDate(1); d.setMonth(d.getMonth() + 1); const end = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); d.setDate(Math.min(anchorDay, end)); } else d.setDate(d.getDate() + (recurrence === 'weekly' ? 7 : 1)); } while (d <= now);
+  return d.toISOString();
+}
+export function localIntent(input: string): { action: string; text?: string } | null {
+  const text = input.trim().replace(/^jarvis[,\s]+/i, '').trim();
+  const t = text.toLowerCase().replace(/[.!?]+$/, '');
+  if (['save skill','save a skill','save verified skill','save a verified skill','remember skill'].includes(t)) return { action: 'skill-save' };
+  if (['list skills','list saved skills','show skills','show saved skills','what are my skills'].includes(t)) return { action: 'skill-list' };
+  const powerPreference=t.match(/^(?:turn|switch) (on|off) (?:the )?(low power(?: mode)?|battery saver|reduced motion(?: mode)?)$/)||t.match(/^(enable|disable) (low power(?: mode)?|battery saver|reduced motion(?: mode)?)$/);
+  if(powerPreference){const enabled=powerPreference[1]==='on'||powerPreference[1]==='enable';const key=/reduced motion/.test(powerPreference[2])?'reducedMotion':'lowPower';return {action:'preference',text:`${key}=${enabled}`};}
+  if(/^(?:شغل|فعّل|فعل) (?:وضع )?توفير الطاقة$/.test(t))return {action:'preference',text:'lowPower=true'};
+  if(/^(?:اقفل|عطل|الغِ) (?:وضع )?توفير الطاقة$/.test(t))return {action:'preference',text:'lowPower=false'};
+  if(/^(?:فعل|فعّل) تقليل الحركة$/.test(t))return {action:'preference',text:'reducedMotion=true'};
+  if(/^(?:عطل|الغِ) تقليل الحركة$/.test(t))return {action:'preference',text:'reducedMotion=false'};
+  const preferredName=text.match(/^(?:call me|set my name to) ([^\r\n]{1,60})$/i);
+  if(preferredName)return {action:'preference',text:`name=${preferredName[1].trim()}`};
+  const browserScroll=t.match(/^scroll (up|down) (?:on )?(?:the )?(?:(?:current|active) )?(?:browser )?(?:page|tab|website)$/)||t.match(/^scroll (up|down) (?:on )?(?:the )?(?:browser )?(?:page|tab)$/);
+  if(browserScroll)return {action:'browser-scroll',text:browserScroll[1]};
+  const browserLink=t.match(/^(?:click|open|follow|activate) (?:the )?(?:link|hyperlink) (?:["“]([^"”\r\n]{1,160})["”]|([^\r\n]{1,160}))$/i);
+  if(browserLink){const label=(browserLink[1]??browserLink[2]??'').trim();if(label&&!/[\u0000-\u001f\u007f]/.test(label))return {action:'browser-link',text:label};}
+  const browserButton=t.match(/^(?:click|press|activate) (?:the )?button (?:["“]([^"”\r\n]{1,120})["”]|([^\r\n]{1,120}))$/i);
+  if(browserButton){const label=(browserButton[1]??browserButton[2]??'').trim();if(label&&!/[\u0000-\u001f\u007f]/.test(label))return {action:'browser-button',text:label};}
+  const browserFill=text.match(/^(?:fill|enter|type) (?:the )?(?:form )?field ["“]([^"”\r\n]{1,120})["”] with ["“]([^"”\r\n]{0,2000})["”]$/i);
+  if(browserFill&&!/[\u0000-\u001f\u007f]/.test(browserFill[1]+browserFill[2]))return {action:'browser-fill',text:JSON.stringify({label:browserFill[1],value:browserFill[2]})};
+  if(/^(?:read|show me|what(?:'s| is) on) (?:the )?(?:(?:current|active) )?(?:browser )?(?:page|tab|website|this page)$/.test(t)||/^(?:اقرا|اقرأ|وريني).*(?:الصفحة|صفحة المتصفح)$/.test(t))return {action:'browser-read'};
+  const appName = '(chrome|google chrome|vs code|vscode)';
+  const displayName = '(one|two|three|1|2|3|left|center|right)';
+  const appOpen = t.match(new RegExp(`^open\\s+${appName}\\s+on\\s+(?:monitor|display)\\s+${displayName}$`));
+  if (appOpen) return { action: 'app-window', text: `${appOpen[1].includes('code') ? 'vscode' : 'chrome'}|open|${appOpen[2]}` };
+  const appMove = t.match(new RegExp(`^move\\s+${appName}\\s+to\\s+(?:monitor|display)\\s+${displayName}$`));
+  if (appMove) return { action: 'app-window', text: `${appMove[1].includes('code') ? 'vscode' : 'chrome'}|move|${appMove[2]}` };
+  const appFront = t.match(new RegExp(`^(?:bring|focus)\\s+${appName}(?:\\s+to the front)?$`));
+  if (appFront) return { action: 'app-window', text: `${appFront[1].includes('code') ? 'vscode' : 'chrome'}|focus|` };
+  const appState = t.match(new RegExp(`^(minimize|restore)\\s+${appName}$`));
+  if (appState) return { action: 'app-window', text: `${appState[2].includes('code') ? 'vscode' : 'chrome'}|${appState[1]}|` };
+  const monitor = t.match(/^(?:(?:switch|move|put|open|show)\s+(?:(?:jarvis|yourself)\s+)?(?:fullscreen\s+)?(?:to\s+)?(?:on\s+)?(?:monitor|display)\s+(one|two|three|1|2|3|left|center|right)|(?:switch|move)\s+to\s+(?:monitor|display)\s+(one|two|three|1|2|3|left|center|right))$/);
+  if (monitor) return { action: 'monitor', text: monitor[1] ?? monitor[2] };
+  const commands: Record<string, string> = { 'open chrome': 'chrome', 'open vs code': 'vscode', 'open vscode': 'vscode', 'lock my pc': 'lock', 'lock windows': 'lock', 'sleep': 'sleep', 'restart': 'restart', 'shut down': 'shutdown', 'check my battery': 'status', 'system status': 'status', 'افتح كروم': 'chrome', 'افتح فيجوال ستوديو كود': 'vscode', 'اقفل الكمبيوتر': 'lock', 'حالة البطارية': 'status' };
+  if (commands[t]) return { action: commands[t] };
+  if (/^remember\s+/i.test(text)) return { action: 'remember', text: text.replace(/^remember\s+/i, '') };
+  if (/^(add task|remind me to)\s+/i.test(text)) return { action: 'task', text: text.replace(/^(add task|remind me to)\s+/i, '') };
+  if (/^recall\s+/i.test(text)) return { action: 'recall', text: text.replace(/^recall\s+/i, '') };
+  if (['briefing', 'daily briefing', 'good morning'].includes(t)) return { action: 'briefing' };
+  if (/^(continue (what i was working on|my work|where i left off)( yesterday)?|resume my work|work continuity)$/.test(t)) return { action: 'continuity' };
+  if (/^(project intelligence|project status|which projects have unresolved issues|show unresolved project tasks)$/.test(t)) return { action: 'project-intelligence' };
+  if (/^(suggestions|what should i focus on|anything i should address)$/.test(t)) return { action: 'suggestions' };
+  const workspace=t.match(/^launch workspace\s+(.{1,60})$/);
+  if(workspace)return {action:'workspace',text:workspace[1].trim()};
+  const projectSearch=t.match(/^(?:search|find) all projects for\s+(.{2,200})$/);
+  if(projectSearch&&!/[\r\n;&|`$<>]/.test(projectSearch[1]))return {action:'project-search',text:projectSearch[1].trim()};
+  const research=text.match(/^(?:research|look up|search the web for)\s+([^\r\n]{3,500})$/i);
+  if(research&&!/[\u0000-\u001f\u007f]/.test(research[1]))return {action:'research',text:research[1].trim()};
+  return null;
+}
+export function localInsight(records: Entry[], kind: 'continuity' | 'project-intelligence' | 'suggestions', now = new Date()): string {
+  const recent = (rows: Entry[]) => [...rows].sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+  const openTasks = recent(records.filter(r=>r.kind==='task'&&!r.done));
+  const activities = recent(records.filter(r=>r.kind==='activity'));
+  const stamp = (value:string) => new Date(value).toLocaleString();
+  if (kind==='continuity') {
+    const lines = [
+      ...activities.slice(0,5).map(r=>`Activity: ${r.title} (${stamp(r.createdAt)})${r.body?` — ${r.body.slice(0,240)}`:''}`),
+      ...openTasks.slice(0,5).map(r=>`Open task: ${r.title}${r.dueAt?` (due ${stamp(r.dueAt)})`:''}`),
+    ];
+    return lines.length?`From your local records (newest first):\n${lines.join('\n')}`:'I found no recent activity or open tasks in the saved local records.';
+  }
+  if (kind==='project-intelligence') {
+    const projects=recent(records.filter(r=>r.kind==='project'));
+    if(!projects.length)return 'No authorized projects are recorded locally yet.';
+    return `Recorded authorized projects and linked open tasks:\n${projects.slice(0,30).map(p=>`• ${p.title}: ${openTasks.filter(t=>t.projectId===p.id).length} open task(s)`).join('\n')}\nThis reflects saved tasks only; it does not imply code issues were scanned.`;
+  }
+  const overdue=openTasks.filter(r=>r.dueAt&&new Date(r.dueAt).getTime()<now.getTime());
+  const failures=new Map<string,number>();
+  for(const row of activities) if(/\b(fail(?:ed|ure)?|error)\b/i.test(`${row.title} ${row.body}`)) failures.set(row.title,(failures.get(row.title)??0)+1);
+  const repeated=[...failures].filter(([,count])=>count>1).slice(0,5);
+  const lines=[...overdue.slice(0,5).map(r=>`Overdue task: ${r.title} (due ${stamp(r.dueAt)})`),...repeated.map(([title,count])=>`Repeated activity label: ${title} (${count} recorded entries)`)];
+  return lines.length?`Possible priorities from local records:\n${lines.join('\n')}\nThese are observations only; no repair or task changes were made.`:'No overdue tasks or repeated failure labels appear in the saved local records.';
+}
+export function monitorIndex(target: string, count: number): number | null {
+  if (!Number.isInteger(count) || count < 1) return null;
+  const normalized = target.trim().toLowerCase();
+  const numeric: Record<string, number> = { one: 0, two: 1, three: 2, '1': 0, '2': 1, '3': 2 };
+  if (normalized in numeric) return numeric[normalized] < count ? numeric[normalized] : null;
+  if (normalized === 'left') return 0;
+  if (normalized === 'right') return count - 1;
+  if (normalized === 'center' && count >= 3) return Math.floor(count / 2);
+  return null;
+}
