@@ -141,6 +141,10 @@ export function localIntent(input: string): { action: string; text?: string } | 
   if (del && /task|reminder|todo|تاسك|مهمة|المهمة|التاسك|^(?:delete|remove|cancel) (?:it|that|this)$/u.test(t)) return { action: 'task-delete', text: del[1].trim() };
   const done = t.match(/^(?:complete|finish|finished|done with|mark|tick off|check off|i (?:did|finished|completed))\s+(?:the\s+|my\s+)?(?:task\s+)?(.*?)(?:\s+(?:task|as done|as complete|done))*$/) || t.match(/^(?:خلصت|خلّصت|عملت)\s+(.*)$/u);
   if (done && done[1].trim()) return { action: 'task-done', text: done[1].trim() };
+  // "Show me my tasks" / "what's next" / "read my mail": the hologram comes to the user, JARVIS summarises it.
+  const pod = t.match(/^(?:show|show me|what are|what's|whats|what is|list|read|check|pull up|bring up)\s+(?:me\s+)?(?:my\s+|the\s+)?(tasks|task list|to ?dos?|schedule|calendar|agenda|next|mail|emails|inbox|weather)(?:\s+(?:today|now|for today))?$/)
+    || (/^(?:what do i have(?: today)?|what's on my plate|whats on my plate|what's coming up|whats coming up)$/.test(t) ? ['', 'next'] : null);
+  if (pod) { const k = pod[1]; return { action: 'pod', text: /task|todo/.test(k) ? 'tasks' : /mail|inbox/.test(k) ? 'comms' : k === 'weather' ? 'weather' : 'next' }; }
   if (/^(add task|remind me to)\s+/i.test(text)) return { action: 'task', text: text.replace(/^(add task|remind me to)\s+/i, '').replace(/^[,:;.\-\s]+/, '').replace(/[.!?]+$/, '') };
   if (/^recall\s+/i.test(text)) return { action: 'recall', text: text.replace(/^recall\s+/i, '') };
   if (['briefing', 'daily briefing', 'good morning'].includes(t)) return { action: 'briefing' };
@@ -236,13 +240,15 @@ export function matchTask<T extends { title: string; createdAt: string }>(phrase
 }
 
 /** Spoken heads-ups in the assistant's voice: what is coming up next, said once per item and stage. */
-export function headsUp(records: { id: string; kind: string; title: string; dueAt?: string; done?: boolean }[], now: Date, warned: Set<string>): { key: string; text: string }[] {
+export function headsUp(records: { id: string; kind: string; title: string; dueAt?: string; done?: boolean; createdAt?: string }[], now: Date, warned: Set<string>): { key: string; text: string }[] {
   const out: { key: string; text: string }[] = [];
   for (const r of records) {
     if (!['task', 'event'].includes(r.kind) || r.done || !r.dueAt) continue;
     const mins = Math.round((Date.parse(r.dueAt) - now.getTime()) / 60000);
     const lead = r.kind === 'event' ? 10 : 5;
-    if (mins > 0 && mins <= lead && !warned.has(r.id + ':soon')) out.push({ key: r.id + ':soon', text: `Sir, ${r.title} in ${mins} minute${mins === 1 ? '' : 's'}.` });
+    // No "in 2 minutes" warning for something the user created a moment ago.
+    const fresh = r.createdAt ? now.getTime() - Date.parse(r.createdAt) < 90000 : false;
+    if (mins > 0 && mins <= lead && !fresh && !warned.has(r.id + ':soon')) out.push({ key: r.id + ':soon', text: `Sir, ${r.title} in ${mins} minute${mins === 1 ? '' : 's'}.` });
     else if (mins <= 0 && mins > -10 && !warned.has(r.id + ':now')) out.push({ key: r.id + ':now', text: `Sir, it's time. ${r.title}.` });
   }
   return out.slice(0, 2);

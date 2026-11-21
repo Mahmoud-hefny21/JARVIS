@@ -159,7 +159,7 @@ function spokenSummary(text:string,limit:number){const clean=text.replace(/[*#`>
 // Timestamped voice stages in the activity log, for diagnosing latency.
 function voiceLog(stage:string){void state.activity('Voice: '+stage,new Date().toISOString());}
 // Commands the AI may run on the user's behalf after understanding free speech (all reversible or allowlisted).
-const AUTO_ACTIONS=new Set(['task','task-delete','task-done','remember','recall','app-window','monitor','chrome','vscode','briefing','status','preference']);
+const AUTO_ACTIONS=new Set(['pod','task','task-delete','task-done','remember','recall','app-window','monitor','chrome','vscode','briefing','status','preference']);
 let pendingAction='';
 async function runUserText(input:string,event:Pick<Event,'isTrusted'>,directVoiceRequest=false,translated=false){
   if(directVoiceRequest)input=repairSpoken(input);
@@ -274,6 +274,18 @@ function coreGraphic(){if(coreSvg)return coreSvg;const ticks=Array.from({length:
   <circle class="ws-draw" cx="200" cy="200" r="118"/>
   <g class="ws-legend"><text><textPath href="#ws-legend">J.A.R.V.I.S. · ALL SYSTEMS ONLINE · PERSONAL INTELLIGENCE · VOICE LINK ACTIVE · LOCAL CORE ·</textPath></text></g></svg>`;return coreSvg;}
 function refreshWorkshop(){if(page!=='hud')return;const el=document.querySelector('#ws-pods');if(el)el.outerHTML=workshopPods();}
+// Film-style confirmations: short, varied, never the same robotic sentence twice in a row.
+let lastAck='';
+function ack(){const options=['Done, sir.','Right away, sir.','Done.','Consider it handled.','As you wish.'].filter(o=>o!==lastAck);lastAck=options[Math.floor(Math.random()*options.length)];return lastAck;}
+function podSummary(kind:string){const now=Date.now();const open=state.list('task').filter(t=>!t.done);
+  if(kind==='tasks')return open.length?`You have ${open.length} open task${open.length>1?'s':''}: ${open.slice(0,3).map(t=>t.title).join(', ')}${open.length>3?', and more':''}.`:'Your task list is clear, sir.';
+  if(kind==='comms')return emails.length?`${emails.length} recent emails, sir. The latest is from ${emails[0].from.replace(/<.*>/,'').trim()}: ${emails[0].subject}.`:'No new mail has been synced, sir.';
+  if(kind==='weather')return weather?`It's ${Math.round(weather.temperature)} degrees and ${weather.description.toLowerCase()} in ${state.settings.location||'your area'}.`:'Weather is offline at the moment, sir.';
+  const next=[...open,...state.list('event')].filter(r=>r.dueAt&&Date.parse(r.dueAt)>now-600000&&!r.done).sort((a,b)=>a.dueAt.localeCompare(b.dueAt));
+  if(!next.length)return 'Nothing on the schedule, sir. The day is yours.';
+  const first=next[0],mins=Math.round((Date.parse(first.dueAt)-now)/60000);
+  return `Next up: ${first.title}, ${mins<=0?'right now':mins<60?'in '+mins+' minutes':'at '+new Date(first.dueAt).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}.${next.length>1?' Then '+next[1].title+'.':''}`;}
+function flashPod(kind:string){if(page!=='hud')return;const el=document.querySelector(`.ws-${kind}`);if(!el)return;el.classList.remove('focus');void (el as HTMLElement).offsetWidth;el.classList.add('focus');setTimeout(()=>el.classList.remove('focus'),6000);}
 let lastRendered='';
 function render() {
   document.body.classList.toggle('overview-page', page === 'dashboard');
@@ -364,11 +376,12 @@ async function answer(input:string,task?:UserTask,directVoiceRequest=false) {
     if(contextual!==null)response=contextual;
     else if(intent?.action==='skill-save')response=await saveVerifiedSkill(task);
     else if(intent?.action==='skill-list'){if(!native)throw new Error('Saved skill notes are available in the Windows desktop app.');const skills=await command<{title:string;trigger:string;steps:string[];sources:string[];verification:string}[]>('verified_skills_list');const nl=String.fromCharCode(10);response=skills.length?skills.map(s=>[s.title,'When: '+s.trigger,'Steps: '+s.steps.join(' → '),'Sources: '+(s.sources.join(', ')||'none recorded'),'Verification: '+s.verification].join(nl)).join(nl+nl):'No workflow skill notes have been saved yet.';}    else if(intent?.action==='remember'){const saved=await state.add('memory',{title:intent.text!.slice(0,240),body:intent.text!},task);conversationContext.observe(recordEntities([saved])[0]);response=`Got it, I'll remember that.`;}
+    else if(intent?.action==='pod'){response=podSummary(intent.text!);flashPod(intent.text==='weather'?'comms':intent.text!);}
     else if(intent?.action==='task-delete'||intent?.action==='task-done'){const open=state.list('task').filter(t=>!t.done);const hit=matchTask(intent.text??'',open);
       if(!hit)response=open.length?`I couldn’t find that one. Your open tasks: ${open.slice(0,5).map(t=>t.title).join(', ')}.`:'Your task list is already empty.';
       else if(intent.action==='task-delete'){await state.remove(hit.id,task);response=`Deleted “${hit.title}”.`;}
       else{await state.put({...hit,done:true},task);response=`Nice. “${hit.title}” is done.`;}}
-    else if(intent?.action==='task'){const when=parseTaskWhen(intent.text!);const saved=await state.add('task',{title:when.title.slice(0,240),...(when.dueAt?{dueAt:when.dueAt}:{})},task);conversationContext.observe(recordEntities([saved])[0]);response=`Done. “${when.title.slice(0,120)}”${when.dueAt?' for '+new Date(when.dueAt).toLocaleString([],{weekday:'long',hour:'numeric',minute:'2-digit'}):''} is on your list.`;}
+    else if(intent?.action==='task'){const when=parseTaskWhen(intent.text!);const saved=await state.add('task',{title:when.title.slice(0,240),...(when.dueAt?{dueAt:when.dueAt}:{})},task);conversationContext.observe(recordEntities([saved])[0]);response=`${ack()} “${when.title.slice(0,120)}”${when.dueAt?' for '+new Date(when.dueAt).toLocaleString([],{weekday:'long',hour:'numeric',minute:'2-digit'}):''} is on your list.`;}
     else if(intent?.action==='recall'){const words=intent.text!.toLowerCase().split(/\s+/).filter(w=>w.length>2);const memories=native?await command<Entry[]>('memory_search',{query:intent.text!}):state.list('memory').filter(m=>words.some(w=>`${m.title} ${m.body}`.toLowerCase().includes(w)));response=memories.length?memories.slice(0,6).map(m=>m.title+(m.body!==m.title?'\n'+m.body:'')).join('\n\n'):'I don’t have anything on that yet.';}
     else if(intent?.action==='browser-read'){if(!native)throw new Error('Active browser reading is available only in the Windows desktop app.');response=await command<string>('browser_page_read');if(!response.trim())throw new Error('No readable text was exposed by the active browser page.');response='Text read locally from the open browser page (not sent to an AI provider):\n\n'+response.slice(0,20000);}
     else if(intent?.action==='browser-scroll'){if(!native)throw new Error('Active browser scrolling is available only in the Windows desktop app.');const result=await command<{direction:string;verified:boolean}>('browser_page_scroll',{direction:intent.text});if(result.verified!==true||result.direction!==intent.text)throw new Error('The browser page did not confirm scrolling.');response=`Scrolled the active browser page ${result.direction}.`;}
@@ -394,7 +407,7 @@ async function answer(input:string,task?:UserTask,directVoiceRequest=false) {
       if(target){const monitors=await command<{key:string;label:string}[]>('monitor_list');const index=monitorIndex(target,monitors.length);if(index===null)throw new Error(`Cannot resolve monitor “${target}”. ${monitors.length} connected display(s) were found.`);monitorKey=monitors[index].key;}
       await command('app_window_control',{application,operation,monitorKey},task);
       await state.activity(`${operation} ${application}${target?' on '+target:''}`);
-      {const app=application==='vscode'?'VS Code':'Chrome';response=({move:`Done. ${app} is on monitor ${target}.`,open:`${app} is open on monitor ${target}.`,focus:`${app} is in front.`,minimize:`${app} minimized.`,restore:`${app} restored.`} as Record<string,string>)[operation]??`Done.`;}
+      {const app=application==='vscode'?'VS Code':'Chrome';response=({move:`${ack()} ${app} is on monitor ${target}.`,open:`${app} is open on monitor ${target}.`,focus:`${app} is in front.`,minimize:`${app} minimized.`,restore:`${app} restored.`} as Record<string,string>)[operation]??`Done.`;}
     }
     else if(intent?.action==='workspace'){response=await runWorkspace(intent.text!,task);await state.activity('Restored workspace '+intent.text);}
     else if(intent?.action==='project-search'){
@@ -455,13 +468,15 @@ const warned=new Set<string>((()=>{try{return JSON.parse(localStorage.getItem('j
 let hotCpu=0;
 function hudAlert(text:string){const el=document.querySelector<HTMLElement>('#hud-reply');if(!el)return;clearTimeout(hudTimer);el.hidden=false;el.classList.add('done','alert');el.querySelector('.hud-you')!.textContent='';el.querySelector('.hud-jarvis')!.textContent=text;hudTimer=setTimeout(()=>{el.hidden=true;el.classList.remove('alert');},12000);}
 async function proactive(){
-  if(quiet(state.settings)||voiceMode==='ptt'||['Thinking','Speaking','Listening'].includes(aiState))return;
+  if(voiceMode==='ptt'||['Thinking','Speaking'].includes(aiState))return;
+  // Quiet hours mute unprompted chatter, never a reminder the user scheduled themselves.
+  const hush=quiet(state.settings);
   const due=headsUp(state.records,new Date(),warned);
-  if(telemetry?.battery!=null&&!telemetry.charging&&telemetry.battery<=15&&!warned.has('battery:'+new Date().toDateString()))due.push({key:'battery:'+new Date().toDateString(),text:`Sir, battery is at ${telemetry.battery} percent. You may want to plug in.`});
+  if(!hush&&telemetry?.battery!=null&&!telemetry.charging&&telemetry.battery<=15&&!warned.has('battery:'+new Date().toDateString()))due.push({key:'battery:'+new Date().toDateString(),text:`Sir, battery is at ${telemetry.battery} percent. You may want to plug in.`});
   hotCpu=telemetry?.cpu!=null&&telemetry.cpu>90?hotCpu+1:0;
   const cpuKey='cpu:'+Math.floor(Date.now()/600000);
-  if(hotCpu>=4&&!warned.has(cpuKey))due.push({key:cpuKey,text:`Sir, the processor has been running above 90 percent for a minute.`});
-  for(const item of due){warned.add(item.key);hudAlert(item.text);void state.activity('JARVIS heads-up',item.text);if(native&&shouldSpeakResponse(state.settings,true))await speak(item.text).catch(()=>{});}
+  if(!hush&&hotCpu>=4&&!warned.has(cpuKey))due.push({key:cpuKey,text:`Sir, the processor has been running above 90 percent for a minute.`});
+  for(const item of due){warned.add(item.key);hudAlert(item.text);void state.activity('JARVIS heads-up',item.text);if(native&&state.settings.speak!==false){if(aiState==='Listening')await command('speech_stop').catch(()=>{});await speak(item.text).catch(()=>{});}}
   if(due.length)try{localStorage.setItem('jarvis-warned',JSON.stringify([...warned].slice(-300)));}catch{}
 }
 async function greetOnline(){
@@ -522,7 +537,7 @@ async function converse(){
       catch(error){if(/no audible speech|catch that/i.test(String(error))&&request===speechRequest)continue;if(!/cancelled/i.test(String(error)))void state.activity('Voice follow-up stopped',String(error).slice(0,300));break;}
       finally{voiceMode='';}
       if(text)lastHeard=Date.now();
-      if(request!==speechRequest||!text||/^(stop|thanks|thank you|that'?s all|goodbye|never ?mind|mute|be quiet|quiet|shut up|silence|enough|شكرا|خلاص|اسكت|بس)\b/i.test(text.replace(/^jarvis[,. ]*/i,''))){await command('speech_stop').catch(()=>{});break;}
+      if(request!==speechRequest||!text||/^(stop|thanks|thank you|that'?s all|that is all|that'?ll be all|that will be all|goodbye|never ?mind|mute|be quiet|quiet|shut up|silence|enough|شكرا|خلاص|اسكت|بس)\b/i.test(text.replace(/^jarvis[,. ]*/i,''))){await command('speech_stop').catch(()=>{});break;}
       try{await runUserText(text,{isTrusted:true},true);}catch(error){void state.activity('Voice request failed',String(error).slice(0,300));break;}
     }
   }finally{conversing=false;aiState='Ready';render();}
@@ -533,7 +548,9 @@ async function listenOffline(){
   try{
     let text='';
     try{text=await command<string>('speech_microphone',{followUp:false});}
-    catch(error){if(/no audible speech|catch that/i.test(String(error))){toast('I didn’t hear anything. Tap the microphone or say “JARVIS” to try again.');return;}throw error;}
+    catch(error){if(/no audible speech|catch that/i.test(String(error))){
+      // Called by name and nothing followed: answer like a person would, then keep listening.
+      if(request===speechRequest&&desiredWake){voiceMode='';await speak('Sir?').catch(()=>undefined);await converse();}return;}throw error;}
     showCaption(text);voiceLog('transcript ready');if(request!==speechRequest)return;voiceMode='';
     await runUserText(text,{isTrusted:true},true);await converse();
   }finally{if(request===speechRequest){voiceMode='';aiState='Ready';document.documentElement.style.setProperty('--audio-level','0');render();await resumeWake().catch(()=>undefined);}}

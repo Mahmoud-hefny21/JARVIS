@@ -176,3 +176,6 @@ body:not(.ws-booted) .ws-comms{animation-delay:1.35s,1.35s}
 body.reduced-motion .ws-dial *,body.reduced-motion .ws-radar,body.app-idle .ws-radar{animation:none!important}
 body.low-power .ws-radar,body.low-power .ws-legend{display:none}
 .workshop .ws-state{top:calc(50% + min(21vh,50%) + 34px)}
+/* "Show me…": the asked-for hologram steps forward */
+.ws-pod.focus{border-color:#7ff0ff;box-shadow:inset 0 0 0 1px #1f7f9e,0 0 60px #35d6ff66;transform:scale(1.06);transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s;animation:ws-focus 1.2s ease-in-out 2}
+@keyframes ws-focus{50%{box-shadow:inset 0 0 0 1px #1f7f9e,0 0 90px #5be7ffaa}}

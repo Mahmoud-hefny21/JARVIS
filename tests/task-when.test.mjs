@@ -69,3 +69,13 @@ test('number words from speech-to-text', () => {
   assert.equal(Date.parse(parseTaskWhen('call mom in half an hour', now).dueAt) - now.getTime(), 30 * 60000);
   assert.deepEqual(local(parseTaskWhen('gym tomorrow at seven', now).dueAt), [22, 19, 0]);
 });
+test('"show me" requests bring the hologram forward', () => {
+  for (const [said, want] of [['Show me my tasks', 'tasks'], ["What's next?", 'next'], ['What do I have today?', 'next'], ['Read my emails', 'comms'], ['show the weather', 'weather'], ['Jarvis, pull up my schedule', 'next']])
+    assert.deepEqual(localIntent(said), { action: 'pod', text: want }, said);
+});
+test('no heads-up for a task created a moment ago', () => {
+  const now = new Date(2026, 10, 21, 22, 0);
+  const rec = [{ id: 'w', kind: 'task', title: 'Drink water', createdAt: new Date(now.getTime() - 10000).toISOString(), dueAt: new Date(now.getTime() + 120000).toISOString() }];
+  assert.deepEqual(headsUp(rec, now, new Set()), []);
+  assert.equal(headsUp(rec, new Date(now.getTime() + 120000), new Set())[0].text, "Sir, it's time. Drink water.");
+});
