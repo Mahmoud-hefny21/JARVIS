@@ -212,7 +212,9 @@ pub fn user_task_begin(
         || (cfg!(debug_assertions)
             && url.host_str() == Some("127.0.0.1")
             && url.port() == Some(1420));
-    if window.label() != "main" || !local || !window.is_focused().unwrap_or(false) {
+    // Spoken requests come from the native microphone, so they count as the user's own input even when
+    // another app (or another monitor) has focus; typed requests still need the focused window.
+    if window.label() != "main" || !local || !(window.is_focused().unwrap_or(false) || crate::offline_speech::heard_recently()) {
         return Err("Direct tasks require the focused trusted Windows user interface".into());
     }
     let state = window.state::<NativeState>();

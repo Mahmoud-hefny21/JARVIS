@@ -87,7 +87,8 @@ export function nextDue(due: string, recurrence: Entry['recurrence'], now = new 
   return d.toISOString();
 }
 export function localIntent(input: string): { action: string; text?: string } | null {
-  const text = input.trim().replace(/^jarvis[,\s]+/i, '').trim();
+  // Speech-to-text adds punctuation ("Add task, buy milk."); drop it after a leading command phrase so instant commands still match.
+  const text = input.trim().replace(/^(?:hey |ok |okay )?jarvis[,.!\s]+/i, '').replace(/^((?:please )?(?:add (?:a )?task|remind me to|remember(?: that)?|open|show(?: me)?|search(?: for)?))\s*[,:;.\-]+\s*/i, '$1 ').replace(/^please\s+/i, '').replace(/^add a task/i, 'add task').trim();
   const t = text.toLowerCase().replace(/[.!?]+$/, '');
   if (['save skill','save a skill','save verified skill','save a verified skill','remember skill'].includes(t)) return { action: 'skill-save' };
   if (['list skills','list saved skills','show skills','show saved skills','what are my skills'].includes(t)) return { action: 'skill-list' };
@@ -110,6 +111,14 @@ export function localIntent(input: string): { action: string; text?: string } | 
   if(/^(?:read|show me|what(?:'s| is) on) (?:the )?(?:(?:current|active) )?(?:browser )?(?:page|tab|website|this page)$/.test(t)||/^(?:اقرا|اقرأ|وريني).*(?:الصفحة|صفحة المتصفح)$/.test(t))return {action:'browser-read'};
   const appName = '(chrome|google chrome|vs code|vscode)';
   const displayName = '(one|two|three|1|2|3|left|center|right)';
+  // Flexible spoken placement: "switch Chrome in monitor two", "put this tab on screen 1", "send the browser to display left".
+  const placed = t.match(/^(?:(move|switch|put|send|throw|take|open|show)\s+)?(?:the\s+|my\s+)?(google chrome|chrome|vs code|vscode|visual studio code|code|this tab|this window|the browser|browser|this|it)\s+(?:back\s+)?(?:to|in|into|on|onto)\s+(?:the\s+)?(?:monitor|display|screen)\s+(one|two|three|won|to|too|1|2|3|left|center|right)$/)
+    || t.match(/^(move|switch|put|send|open)\s+(?:the\s+|my\s+)?(google chrome|chrome|vs code|vscode|code|this tab|the browser|browser)\s+(?:to\s+)?(?:the\s+)?(one|two|three|1|2|3|left|center|right)\s+(?:monitor|display|screen)$/);
+  if (placed) {
+    const app = /code/.test(placed[2]) ? 'vscode' : 'chrome';
+    const where = ({ won: 'one', to: 'two', too: 'two' } as Record<string, string>)[placed[3]] ?? placed[3];
+    return { action: 'app-window', text: `${app}|${placed[1] === 'open' ? 'open' : 'move'}|${where}` };
+  }
   const appOpen = t.match(new RegExp(`^open\\s+${appName}\\s+on\\s+(?:monitor|display)\\s+${displayName}$`));
   if (appOpen) return { action: 'app-window', text: `${appOpen[1].includes('code') ? 'vscode' : 'chrome'}|open|${appOpen[2]}` };
   const appMove = t.match(new RegExp(`^move\\s+${appName}\\s+to\\s+(?:monitor|display)\\s+${displayName}$`));
@@ -123,7 +132,11 @@ export function localIntent(input: string): { action: string; text?: string } | 
   const commands: Record<string, string> = { 'open chrome': 'chrome', 'open vs code': 'vscode', 'open vscode': 'vscode', 'lock my pc': 'lock', 'lock windows': 'lock', 'sleep': 'sleep', 'restart': 'restart', 'shut down': 'shutdown', 'check my battery': 'status', 'system status': 'status', 'افتح كروم': 'chrome', 'افتح فيجوال ستوديو كود': 'vscode', 'اقفل الكمبيوتر': 'lock', 'حالة البطارية': 'status' };
   if (commands[t]) return { action: commands[t] };
   if (/^remember\s+/i.test(text)) return { action: 'remember', text: text.replace(/^remember\s+/i, '') };
-  if (/^(add task|remind me to)\s+/i.test(text)) return { action: 'task', text: text.replace(/^(add task|remind me to)\s+/i, '') };
+  const del = t.match(/^(?:delete|remove|cancel|clear|drop)\s+(?:the\s+|my\s+)?(?:task|reminder|todo)?\s*(.*?)(?:\s+(?:task|reminder))?$/) || t.match(/^(?:امسح|احذف|الغي|شيل)\s+(?:التاسك|المهمة|مهمة|تاسك)?\s*(.*)$/u);
+  if (del && /task|reminder|todo|تاسك|مهمة|المهمة|التاسك|^(?:delete|remove|cancel) (?:it|that|this)$/u.test(t)) return { action: 'task-delete', text: del[1].trim() };
+  const done = t.match(/^(?:complete|finish|finished|done with|mark|tick off|check off|i (?:did|finished|completed))\s+(?:the\s+|my\s+)?(?:task\s+)?(.*?)(?:\s+(?:task|as done|as complete|done))*$/) || t.match(/^(?:خلصت|خلّصت|عملت)\s+(.*)$/u);
+  if (done && done[1].trim()) return { action: 'task-done', text: done[1].trim() };
+  if (/^(add task|remind me to)\s+/i.test(text)) return { action: 'task', text: text.replace(/^(add task|remind me to)\s+/i, '').replace(/^[,:;.\-\s]+/, '').replace(/[.!?]+$/, '') };
   if (/^recall\s+/i.test(text)) return { action: 'recall', text: text.replace(/^recall\s+/i, '') };
   if (['briefing', 'daily briefing', 'good morning'].includes(t)) return { action: 'briefing' };
   if (/^(continue (what i was working on|my work|where i left off)( yesterday)?|resume my work|work continuity)$/.test(t)) return { action: 'continuity' };
@@ -170,4 +183,44 @@ export function monitorIndex(target: string, count: number): number | null {
   if (normalized === 'right') return count - 1;
   if (normalized === 'center' && count >= 3) return Math.floor(count / 2);
   return null;
+}
+
+const WEEKDAYS=['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+/** Splits a spoken task into a clean title and an optional due time ("buy milk tomorrow at 9" -> "Buy milk", tomorrow 09:00). */
+export function parseTaskWhen(input: string, now = new Date()): { title: string; dueAt?: string } {
+  let text = input.trim().replace(/[.!?،]+$/u, '');
+  let day: Date | null = null, hour: number | null = null, minute = 0;
+  const take = (re: RegExp) => { const m = text.match(re); if (m) text = (text.slice(0, m.index) + ' ' + text.slice(m.index! + m[0].length)).replace(/\s+/g, ' ').trim(); return m; };
+  let m = take(/\bin (\d{1,3}) (minute|minutes|min|hour|hours)\b/i);
+  if (m) { const d = new Date(now.getTime() + Number(m[1]) * (m[2].startsWith('h') ? 3600000 : 60000)); return { title: tidy(text), dueAt: d.toISOString() }; }
+  if (take(/\b(tomorrow|tmrw)\b|بكر[ةه]/iu)) { day = new Date(now); day.setDate(day.getDate() + 1); }
+  else if (take(/\btonight\b/i)) { day = new Date(now); hour = 20; }
+  else if (take(/\btoday\b|النهارد[ةه]/iu)) day = new Date(now);
+  else if ((m = take(new RegExp('\\b(?:next |on |this )?(' + WEEKDAYS.join('|') + ')\\b', 'i')))) {
+    day = new Date(now); const target = WEEKDAYS.indexOf(m[1].toLowerCase());
+    let diff = (target - day.getDay() + 7) % 7; if (diff === 0 || /next/i.test(m[0])) diff = diff || 7; day.setDate(day.getDate() + diff);
+  }
+  if ((m = take(/\bat (\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b|الساع[ةه] (\d{1,2})/iu))) {
+    hour = Number(m[1] ?? m[4]); minute = Number(m[2] ?? 0);
+    if (m[3]?.toLowerCase() === 'pm' && hour < 12) hour += 12; if (m[3]?.toLowerCase() === 'am' && hour === 12) hour = 0;
+    if (!m[3] && hour < 8) hour += 12; // "at 5" means 5 pm for everyday tasks
+    if (!day) { day = new Date(now); day.setHours(hour, minute, 0, 0); if (day <= now) day.setDate(day.getDate() + 1); }
+  }
+  if (!day) return { title: tidy(text) };
+  day.setHours(hour ?? 9, minute, 0, 0);
+  return { title: tidy(text), dueAt: day.toISOString() };
+}
+function tidy(text: string) { const t = text.replace(/\s+(on|at|by)$/i, '').trim(); return t.charAt(0).toUpperCase() + t.slice(1); }
+
+/** Picks the open task a spoken phrase refers to: best word overlap, or the newest task for "it"/"that"/empty. */
+export function matchTask<T extends { title: string; createdAt: string }>(phrase: string, tasks: T[]): T | null {
+  const words = phrase.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(w => w.length > 1 && !['it', 'that', 'this', 'the', 'my', 'task'].includes(w));
+  if (!words.length) return [...tasks].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] ?? null;
+  let best: T | null = null, score = 0;
+  for (const task of tasks) {
+    const title = task.title.toLowerCase();
+    const s = words.filter(w => title.includes(w)).length / words.length;
+    if (s > score) { score = s; best = task; }
+  }
+  return score >= 0.5 ? best : null;
 }

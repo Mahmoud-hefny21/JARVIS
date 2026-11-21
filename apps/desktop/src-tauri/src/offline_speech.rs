@@ -294,6 +294,10 @@ fn clean_transcript(text: &str) -> Result<String> {
     }
     Ok(text.chars().take(4000).collect())
 }
+static LAST_HEARD: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+fn now_ms() -> u64 { std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0) }
+/// True for 20 s after the microphone captured a real (non-empty) request from the user.
+pub fn heard_recently() -> bool { now_ms().saturating_sub(LAST_HEARD.load(Ordering::SeqCst)) < 20_000 }
 pub fn microphone(app: &tauri::AppHandle, follow_up: bool) -> Result<String> {
     if status(app)?["installed"] != true && crate::groq::key(app).is_none() {
         return Err("Install the optional offline speech component in Settings first".into());
@@ -316,5 +320,8 @@ pub fn microphone(app: &tauri::AppHandle, follow_up: bool) -> Result<String> {
         transcribe(app, &wav)
     })();
     let _ = std::fs::remove_file(&wav);
+    if result.is_ok() {
+        LAST_HEARD.store(now_ms(), Ordering::SeqCst);
+    }
     result
 }

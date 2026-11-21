@@ -9,19 +9,42 @@ use tauri::Emitter;
 
 const STT_MODEL: &str = "whisper-large-v3-turbo";
 /// Biases recognition toward the app's command words (names Whisper often mishears).
-const VOCABULARY: &str = "JARVIS, open Chrome, YouTube, VS Code, monitor one, monitor two, add task, remind me, remember, daily briefing, weather.";
+const VOCABULARY: &str = "JARVIS, buy, open Chrome, YouTube, VS Code, monitor one, monitor two, add task, remind me, remember, daily briefing, weather.";
 const CHAT_MODEL: &str = "openai/gpt-oss-120b";
 
 pub fn key(app: &tauri::AppHandle) -> Option<zeroize::Zeroizing<String>> {
     crate::integrations::credential(app, "groq").ok()
 }
 
-fn client(timeout: u64) -> Result<reqwest::blocking::Client> {
-    reqwest::blocking::Client::builder()
-        .connect_timeout(Duration::from_secs(4))
-        .timeout(Duration::from_secs(timeout))
-        .build()
-        .map_err(|_| "Network client unavailable".into())
+/// One pooled client for the whole run: reusing the TLS connection saves a handshake (~0.3-0.6 s) per request.
+fn client(timeout: u64) -> Result<ClientWithTimeout> {
+    static CLIENT: std::sync::OnceLock<reqwest::blocking::Client> = std::sync::OnceLock::new();
+    let c = CLIENT.get_or_init(|| {
+        reqwest::blocking::Client::builder()
+            .connect_timeout(Duration::from_secs(4))
+            .pool_idle_timeout(Duration::from_secs(90))
+            .tcp_keepalive(Duration::from_secs(30))
+            .build()
+            .unwrap_or_default()
+    });
+    Ok(ClientWithTimeout(c, Duration::from_secs(timeout)))
+}
+struct ClientWithTimeout(&'static reqwest::blocking::Client, Duration);
+impl ClientWithTimeout {
+    fn post(&self, url: &str) -> reqwest::blocking::RequestBuilder {
+        self.0.post(url).timeout(self.1)
+    }
+}
+
+/// Opens the Groq connection in the background (called on wake word) so the
+/// transcription request that follows skips DNS and TLS setup.
+pub fn warm(app: &tauri::AppHandle) {
+    let Some(key) = key(app) else { return };
+    std::thread::spawn(move || {
+        if let Ok(c) = client(5) {
+            let _ = c.0.get("https://api.groq.com/openai/v1/models").bearer_auth(key.as_str()).timeout(c.1).send();
+        }
+    });
 }
 
 pub fn transcribe(app: &tauri::AppHandle, wav: &Path, language: &str) -> Result<String> {

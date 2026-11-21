@@ -398,6 +398,9 @@ pub fn start_voice(
         {
             if line.len() < 16000 {
                 if let Ok(mut value) = serde_json::from_str::<Value>(&line) {
+                    if value["type"] == "wake" {
+                        crate::groq::warm(&app);
+                    }
                     value["session"] = json!(event_session);
                     let _ = app.emit("voice", value);
                 }

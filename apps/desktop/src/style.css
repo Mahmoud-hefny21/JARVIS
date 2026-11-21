@@ -27,7 +27,7 @@ body:not(.hud-booted) .panel{animation:hud-boot .7s cubic-bezier(.2,.8,.2,1) bot
 .panel>.panel-heading{position:relative}
 .panel:hover{border-color:#32d8ffaa;box-shadow:0 0 24px #00b4ff22,inset 0 0 18px #00b4ff0d;transition:border-color .25s,box-shadow .25s}
 .tiny-label.live:before{animation:hud-blink 1.6s ease-in-out infinite}
-.core-mark{animation:reactor 4s ease-in-out infinite}
+.core-mark{filter:drop-shadow(0 0 12px #0ac9ffa0);animation:reactor 4s ease-in-out infinite;will-change:opacity}
 .ai-core:before{content:"";position:absolute;inset:22%;border-radius:50%;background:radial-gradient(circle,#2fd9ff26 0,#0aa6d80f 45%,transparent 70%);animation:reactor-glow 4s ease-in-out infinite;z-index:-1}
 .ai-core:after{content:"";position:absolute;inset:6%;border-radius:50%;border:1px solid #32d8ff33;border-top-color:#7deaff;animation:orbit 6s linear infinite;pointer-events:none}
 .core-center>strong{animation:hud-flicker 7s steps(1) infinite}
@@ -42,12 +42,12 @@ body:not(.hud-booted) .panel{animation:hud-boot .7s cubic-bezier(.2,.8,.2,1) bot
 .overview-page .panel,.overview-page.panel{animation:none!important}
 .overview-dragging .panel{animation:none}
 @keyframes hud-boot{from{opacity:0;transform:translateY(10px) scale(.985);filter:brightness(2) saturate(.3)}60%{opacity:1;filter:brightness(1.3)}to{opacity:1;transform:none;filter:none}}
-@keyframes hud-trace{0%,100%{left:25px;width:48px;opacity:1}50%{left:calc(100% - 90px);width:60px;opacity:.6}}
+@keyframes hud-trace{0%,100%{opacity:1}50%{opacity:.35}}
 @keyframes hud-scan{to{transform:translateY(900%)}}
 @keyframes hud-blink{50%{opacity:.25}}
-@keyframes reactor{0%,100%{filter:drop-shadow(0 0 8px #0ac9ff70)}50%{filter:drop-shadow(0 0 20px #3fe0ffcc) brightness(1.25)}}
+@keyframes reactor{0%,100%{opacity:.82}50%{opacity:1}}
 @keyframes reactor-glow{0%,100%{opacity:.6;transform:scale(.94)}50%{opacity:1;transform:scale(1.06)}}
 @keyframes hud-flicker{0%,93%,97%{opacity:1}95%{opacity:.55}}
 @keyframes hud-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
 @keyframes voice-bar{from{height:2px}to{height:16px}}
-@keyframes hud-sweep{0%,100%{left:90px}50%{left:calc(100% - 170px)}}
+@keyframes hud-sweep{0%,100%{opacity:.9}50%{opacity:.3}}

@@ -7,7 +7,7 @@ export class State extends EventTarget {
   list(kind: EntryKind) { return this.records.filter(r => r.kind === kind).sort((a, b) => b.createdAt.localeCompare(a.createdAt)); }
   async put(record: Entry,task?:UserTask) { const value = { ...record, updatedAt: new Date().toISOString() }; await repository.put(value,this.records.find(r=>r.id===record.id)?.updatedAt,task); this.records = [...this.records.filter(r => r.id !== value.id), value]; this.changed(); return value; }
   async add(kind: EntryKind, values: Partial<Entry>,task?:UserTask) { return this.put(createEntry(kind, values),task); }
-  async remove(id: string) { await repository.remove(id,this.records.find(r=>r.id===id)?.updatedAt); this.records = this.records.filter(r => r.id !== id); this.changed(); }
+  async remove(id: string,task?:UserTask) { await repository.remove(id,this.records.find(r=>r.id===id)?.updatedAt,task); this.records = this.records.filter(r => r.id !== id); this.changed(); }
   async preferences(settings: Settings,task?:UserTask,notify=true) { await repository.saveSettings(settings,task); this.settings = settings; if(notify)this.changed(); }
   async activity(title: string, body = '') { await this.add('activity', { title, body }); }
   changed() { this.dispatchEvent(new Event('change')); }

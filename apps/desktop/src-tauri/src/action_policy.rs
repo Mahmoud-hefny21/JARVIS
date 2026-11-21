@@ -27,6 +27,11 @@ pub fn routine(action: &str, args: &Value, before: &str) -> Option<String> {
             }
             Some(format!("website:{}", url.as_str()))
         }
+        // A user's own task, deleted by their direct command, is routine and recoverable (encrypted backup kept).
+        "record_delete" => {
+            let record: Value = serde_json::from_str(before).ok()?;
+            (record["kind"] == "task").then(|| format!("task-delete:{}", args["id"].as_str().unwrap_or_default()))
+        }
         "browser_page_read" if args.as_object().is_some_and(|object| object.is_empty()) => {
             Some("browser-active".into())
         }
@@ -268,5 +273,18 @@ mod tests {
             &json!({"name":"Sir","overviewLayout":after["overviewLayout"]})
         )
         .is_err());
+    }
+}
+
+#[cfg(test)]
+mod task_delete_tests {
+    use super::routine;
+    use serde_json::json;
+    #[test]
+    fn only_own_tasks_are_deleted_without_a_popup() {
+        let args = json!({"id":"t1","expectedUpdatedAt":"x"});
+        assert_eq!(routine("record_delete", &args, r#"{"kind":"task","title":"Buy milk"}"#).as_deref(), Some("task-delete:t1"));
+        assert!(routine("record_delete", &args, r#"{"kind":"memory","title":"Secret"}"#).is_none());
+        assert!(routine("record_delete", &args, "").is_none());
     }
 }

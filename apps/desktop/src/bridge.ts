@@ -49,7 +49,7 @@ async function idb<T>(store: string, mode: IDBTransactionMode, run: (s: IDBObjec
 export const repository = {
   async all(): Promise<Entry[]> { if(!native){const rows=await idb<unknown[]>('records','readonly',s=>s.getAll());return rows.map(row=>RecordSchema.parse(row));}const rows:Entry[]=[];for(let offset=0;;offset+=500){const page=await command<Entry[]>('records_list',{offset,limit:500});rows.push(...page.map(row=>RecordSchema.parse(row)));if(page.length<500)break;}return rows; },
   async put(entry: Entry, expectedUpdatedAt?: string,task?:UserTask) { const record = RecordSchema.parse(entry); if (native) await command('record_put', { record, expectedUpdatedAt:expectedUpdatedAt??null },task); else await idb('records', 'readwrite', s => s.put(record)); },
-  async remove(id: string, expectedUpdatedAt?: string) { if (native) await command('record_delete', { id, expectedUpdatedAt:expectedUpdatedAt??null }); else await idb('records', 'readwrite', s => s.delete(id)); },
+  async remove(id: string, expectedUpdatedAt?: string,task?:UserTask) { if (native) await command('record_delete', { id, expectedUpdatedAt:expectedUpdatedAt??null },task); else await idb('records', 'readwrite', s => s.delete(id)); },
   async settings(): Promise<Settings> { const value = native ? await command('settings_get') : await idb('settings', 'readonly', s => s.get('preferences')); return SettingsSchema.parse({ ...defaults, ...(value as object ?? {}) }); },
   async saveSettings(settings: Settings,task?:UserTask) { const value = SettingsSchema.parse(settings); if (native) await command('settings_save', { settings: value },task); else await idb('settings', 'readwrite', s => s.put(value, 'preferences')); },
 };
