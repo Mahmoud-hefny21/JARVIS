@@ -3,7 +3,7 @@ import './overview.css';
 import './polish.css';
 setTimeout(()=>document.body.classList.add('hud-booted'),1500);
 import { listen } from '@tauri-apps/api/event';
-import { createEntry, Entry, EntryKind, localInsight, localIntent, parseTaskWhen, matchTask, monitorIndex, nextDue, quiet, shouldSpeakResponse, voiceStopRecovery, shouldRetryWithWhisper, shouldUseWhisperForDictation, spokenFailureMessage, SettingsSchema, WeatherSchema, WorkspacePresetSchema, OverviewPanelId } from '../../../packages/shared/model';
+import { createEntry, Entry, EntryKind, localInsight, localIntent, parseTaskWhen, matchTask, headsUp, onlineGreeting, monitorIndex, nextDue, quiet, shouldSpeakResponse, voiceStopRecovery, shouldRetryWithWhisper, shouldUseWhisperForDictation, spokenFailureMessage, SettingsSchema, WeatherSchema, WorkspacePresetSchema, OverviewPanelId } from '../../../packages/shared/model';
 import { command, native, ProjectInfo, SecurityStatus, Telemetry, Tool, UserTask, withUserTask, cancelUserTasks } from './bridge';
 import { directScopes } from '../../../packages/shared/task-intent';
 import { state } from './state';
@@ -417,6 +417,27 @@ function alertItems(){const now=Date.now(),items:{level:'critical'|'warn'|'info'
 function alertsStrip(){return `<div class="hud-alerts" id="hud-alerts" role="status" aria-live="polite">${alertItems().slice(0,4).map((a,i)=>`<span class="hud-alert ${a.level}" style="--i:${i}">${icon(a.icon)}${esc(a.text)}</span>`).join('')}</div>`;}
 let lastAlerts='';
 function refreshAlerts(){const el=document.querySelector('#hud-alerts');if(!el)return;const html=alertsStrip();if(html===lastAlerts)return;lastAlerts=html;el.outerHTML=html;}
+// Proactive assistant: like the films, JARVIS speaks up on its own about what is coming next.
+const warned=new Set<string>((()=>{try{return JSON.parse(localStorage.getItem('jarvis-warned')??'[]') as string[];}catch{return [];}})());
+let hotCpu=0;
+function hudAlert(text:string){const el=document.querySelector<HTMLElement>('#hud-reply');if(!el)return;clearTimeout(hudTimer);el.hidden=false;el.classList.add('done','alert');el.querySelector('.hud-you')!.textContent='';el.querySelector('.hud-jarvis')!.textContent=text;hudTimer=setTimeout(()=>{el.hidden=true;el.classList.remove('alert');},12000);}
+async function proactive(){
+  if(quiet(state.settings)||voiceMode==='ptt'||['Thinking','Speaking','Listening'].includes(aiState))return;
+  const due=headsUp(state.records,new Date(),warned);
+  if(telemetry?.battery!=null&&!telemetry.charging&&telemetry.battery<=15&&!warned.has('battery:'+new Date().toDateString()))due.push({key:'battery:'+new Date().toDateString(),text:`Sir, battery is at ${telemetry.battery} percent. You may want to plug in.`});
+  hotCpu=telemetry?.cpu!=null&&telemetry.cpu>90?hotCpu+1:0;
+  const cpuKey='cpu:'+Math.floor(Date.now()/600000);
+  if(hotCpu>=4&&!warned.has(cpuKey))due.push({key:cpuKey,text:`Sir, the processor has been running above 90 percent for a minute.`});
+  for(const item of due){warned.add(item.key);hudAlert(item.text);void state.activity('JARVIS heads-up',item.text);if(native&&shouldSpeakResponse(state.settings,true))await speak(item.text).catch(()=>{});}
+  if(due.length)try{localStorage.setItem('jarvis-warned',JSON.stringify([...warned].slice(-300)));}catch{}
+}
+async function greetOnline(){
+  let key='';try{key=new Date().toDateString();if(localStorage.getItem('jarvis-greeted')===key)return;}catch{}
+  const now=Date.now();const next=state.list('event').filter(e=>e.dueAt&&Date.parse(e.dueAt)>now&&Date.parse(e.dueAt)-now<12*3600000).sort((a,b)=>a.dueAt.localeCompare(b.dueAt))[0]??null;
+  const text=onlineGreeting(state.settings.name,new Date().getHours(),state.list('task').filter(t=>!t.done),next,weather?{temperature:weather.temperature,description:weather.description}:null);
+  try{localStorage.setItem('jarvis-greeted',key);}catch{}
+  hudAlert(text);if(native&&shouldSpeakResponse(state.settings,true))await speak(text).catch(()=>{});
+}
 async function speak(text:string) {
   voiceLog('speaking');
   const request=++speechRequest;const resume=desiredWake;aiState='Speaking';render();
@@ -596,6 +617,7 @@ async function init() {
   function tickClock(){if(!document.hidden&&!nativeHidden)updateClock();setTimeout(tickClock,60000-Date.now()%60000+10);}setTimeout(tickClock,60000-Date.now()%60000+10);
   setInterval(()=>{void refreshTelemetry();if(native&&!document.hidden&&!nativeHidden&&Date.now()-lastSecurity>300000)void run(refreshSecurity);},5000);
   setInterval(()=>void run(reminders),15000);void run(reminders);
+  setInterval(()=>void proactive(),15000);setTimeout(()=>void greetOnline(),6000);
   // Minimised or in the tray: freeze all motion so JARVIS costs ~0% CPU in the background.
   document.addEventListener('visibilitychange',()=>document.body.classList.toggle('app-idle',document.hidden));
 }

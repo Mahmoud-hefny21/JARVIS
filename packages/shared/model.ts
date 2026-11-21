@@ -193,7 +193,12 @@ export function monitorIndex(target: string, count: number): number | null {
 const WEEKDAYS=['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
 /** Splits a spoken task into a clean title and an optional due time ("buy milk tomorrow at 9" -> "Buy milk", tomorrow 09:00). */
 export function parseTaskWhen(input: string, now = new Date()): { title: string; dueAt?: string } {
-  let text = input.trim().replace(/[.!?،]+$/u, '');
+  // Speech-to-text writes small numbers as words ("in two minutes", "half an hour").
+  const NUMBERS: Record<string, string> = { a: '1', an: '1', one: '1', two: '2', three: '3', four: '4', five: '5', six: '6', seven: '7', eight: '8', nine: '9', ten: '10', fifteen: '15', twenty: '20', thirty: '30', forty: '40', 'forty five': '45', fifty: '50' };
+  let text = input.trim().replace(/[.!?،]+$/u, '')
+    .replace(/\bin half an hour\b/i, 'in 30 minutes')
+    .replace(/\bin (a|an|one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|forty five|forty|fifty) (minute|minutes|min|hour|hours)\b/i, (_, n: string, unit: string) => `in ${NUMBERS[n.toLowerCase()]} ${unit}`)
+    .replace(/\bat (one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b/i, (_, n: string) => `at ${({ eleven: '11', twelve: '12' } as Record<string, string>)[n.toLowerCase()] ?? NUMBERS[n.toLowerCase()]}`);
   let day: Date | null = null, hour: number | null = null, minute = 0;
   const take = (re: RegExp) => { const m = text.match(re); if (m) text = (text.slice(0, m.index) + ' ' + text.slice(m.index! + m[0].length)).replace(/\s+/g, ' ').trim(); return m; };
   let m = take(/\bin (\d{1,3}) (minute|minutes|min|hour|hours)\b/i);
@@ -228,4 +233,28 @@ export function matchTask<T extends { title: string; createdAt: string }>(phrase
     if (s > score) { score = s; best = task; }
   }
   return score >= 0.5 ? best : null;
+}
+
+/** Spoken heads-ups in the assistant's voice: what is coming up next, said once per item and stage. */
+export function headsUp(records: { id: string; kind: string; title: string; dueAt?: string; done?: boolean }[], now: Date, warned: Set<string>): { key: string; text: string }[] {
+  const out: { key: string; text: string }[] = [];
+  for (const r of records) {
+    if (!['task', 'event'].includes(r.kind) || r.done || !r.dueAt) continue;
+    const mins = Math.round((Date.parse(r.dueAt) - now.getTime()) / 60000);
+    const lead = r.kind === 'event' ? 10 : 5;
+    if (mins > 0 && mins <= lead && !warned.has(r.id + ':soon')) out.push({ key: r.id + ':soon', text: `Sir, ${r.title} in ${mins} minute${mins === 1 ? '' : 's'}.` });
+    else if (mins <= 0 && mins > -10 && !warned.has(r.id + ':now')) out.push({ key: r.id + ':now', text: `Sir, it's time. ${r.title}.` });
+  }
+  return out.slice(0, 2);
+}
+
+/** The once-a-day status line JARVIS says when it comes online. */
+export function onlineGreeting(name: string, hour: number, openTasks: { title: string; dueAt?: string }[], nextEvent: { title: string; dueAt: string } | null, weather: { temperature: number; description: string } | null): string {
+  const who = name.toLowerCase() === 'sir' ? 'sir' : name;
+  const part = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const bits = [`${part}, ${who}. All systems are online.`];
+  if (weather) bits.push(`It's ${Math.round(weather.temperature)} degrees and ${weather.description.toLowerCase()}.`);
+  if (nextEvent) bits.push(`Next on your calendar: ${nextEvent.title} at ${new Date(nextEvent.dueAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.`);
+  bits.push(openTasks.length ? `You have ${openTasks.length} open task${openTasks.length === 1 ? '' : 's'}${openTasks.length <= 2 ? ': ' + openTasks.map(t => t.title).join(' and ') : ''}.` : 'Your task list is clear.');
+  return bits.join(' ');
 }

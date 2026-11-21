@@ -46,3 +46,26 @@ test('natural window placement across monitors', () => {
     'Jarvis, move VS Code to the left monitor': 'vscode|move|left', 'send the browser to display three': 'chrome|move|three', 'open chrome on monitor two': 'chrome|open|two', 'Throw Chrome on the second screen.': 'chrome|move|two', 'move this tab to the main screen': 'chrome|move|one' };
   for (const [said, want] of Object.entries(cases)) if (want) assert.equal(localIntent(said)?.text, want, said);
 });
+import { headsUp, onlineGreeting } from '../packages/shared/model.ts';
+test('proactive heads-ups are spoken once per stage', () => {
+  const now = new Date(2026, 10, 21, 19, 40);
+  const recs = [{ id: 'a', kind: 'task', title: 'Go to Arabella Plaza', dueAt: new Date(now.getTime() + 4 * 60000).toISOString() },
+    { id: 'b', kind: 'event', title: 'Team call', dueAt: new Date(now.getTime() + 9 * 60000).toISOString() },
+    { id: 'c', kind: 'task', title: 'Later', dueAt: new Date(now.getTime() + 60 * 60000).toISOString() }];
+  const warned = new Set();
+  const first = headsUp(recs, now, warned);
+  assert.deepEqual(first.map(x => x.text), ['Sir, Go to Arabella Plaza in 4 minutes.', 'Sir, Team call in 9 minutes.']);
+  first.forEach(x => warned.add(x.key));
+  assert.deepEqual(headsUp(recs, now, warned), []);
+  assert.equal(headsUp(recs, new Date(now.getTime() + 4 * 60000), warned)[0].text, "Sir, it's time. Go to Arabella Plaza.");
+});
+test('online greeting sounds like a briefing', () => {
+  const g = onlineGreeting('Sir', 20, [{ title: 'Buy milk' }], null, { temperature: 27.6, description: 'Partly cloudy' });
+  assert.equal(g, 'Good evening, sir. All systems are online. It\'s 28 degrees and partly cloudy. You have 1 open task: Buy milk.');
+});
+test('number words from speech-to-text', () => {
+  const r = parseTaskWhen('stretch break in two minutes', now);
+  assert.equal(r.title, 'Stretch break'); assert.equal(Date.parse(r.dueAt) - now.getTime(), 2 * 60000);
+  assert.equal(Date.parse(parseTaskWhen('call mom in half an hour', now).dueAt) - now.getTime(), 30 * 60000);
+  assert.deepEqual(local(parseTaskWhen('gym tomorrow at seven', now).dueAt), [22, 19, 0]);
+});

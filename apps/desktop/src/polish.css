@@ -77,3 +77,9 @@ body.app-idle *,body.app-idle *::before,body.app-idle *::after{animation-play-st
    Panels keep their static trace; motion stays on the reactor, globe and command bar. */
 .panel:before,.panel-heading:after{animation:none!important}
 .overview-page .globe{filter:none}
+/* Proactive heads-up: JARVIS speaking up on its own reads as a priority call-out, not a reply. */
+.hud-reply.alert{border-color:#ffb547;box-shadow:0 0 0 1px #4a3208 inset,0 0 44px #ffb54733,0 20px 60px #000a}
+.hud-reply.alert::after{content:"PRIORITY · J.A.R.V.I.S.";color:#ffc76a}
+.hud-reply.alert .hud-you{display:none}
+.hud-reply.alert .hud-jarvis{color:#fff3df;text-shadow:0 0 12px #ffb54740}
+.hud-reply.alert{pointer-events:none}
