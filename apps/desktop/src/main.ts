@@ -3,7 +3,7 @@ import './overview.css';
 import './polish.css';
 setTimeout(()=>document.body.classList.add('hud-booted'),1500);
 import { listen } from '@tauri-apps/api/event';
-import { createEntry, Entry, EntryKind, localInsight, localIntent, parseTaskWhen, matchTask, headsUp, onlineGreeting, monitorIndex, nextDue, quiet, shouldSpeakResponse, voiceStopRecovery, shouldRetryWithWhisper, shouldUseWhisperForDictation, spokenFailureMessage, SettingsSchema, WeatherSchema, WorkspacePresetSchema, OverviewPanelId } from '../../../packages/shared/model';
+import { createEntry, Entry, EntryKind, localInsight, localIntent, parseTaskWhen, matchTask, headsUp, onlineGreeting, translateCommandWords, monitorIndex, nextDue, quiet, shouldSpeakResponse, voiceStopRecovery, shouldRetryWithWhisper, shouldUseWhisperForDictation, spokenFailureMessage, SettingsSchema, WeatherSchema, WorkspacePresetSchema, OverviewPanelId } from '../../../packages/shared/model';
 import { command, native, ProjectInfo, SecurityStatus, Telemetry, Tool, UserTask, withUserTask, cancelUserTasks } from './bridge';
 import { directScopes } from '../../../packages/shared/task-intent';
 import * as sound from './audio';
@@ -25,7 +25,7 @@ function observeSelectedFile(){if(page==='code'&&projectInfo&&selectedFile)conve
 async function contextualAction(input:string,task?:UserTask):Promise<string|null>{
   if(informationalRequest(input))return null;
   const site=input.trim().match(/^(?:open|visit|go to|navigate to)\s+(https?:\/\/\S+)$/i);
-  if(site){await command('open_website',{url:new URL(site[1]).href},task);return 'Your browser accepted the requested website. Page loading is controlled by the browser.';}
+  if(site){const url=new URL(site[1]);await command('open_website',{url:url.href},task);const known:Record<string,string>={'web.whatsapp.com':'WhatsApp Web','www.youtube.com':'YouTube','mail.google.com':'Gmail','github.com':'GitHub'};return `${ack()} Opening ${known[url.host]??url.host.replace(/^www\./,'')}.`;}
   const copy=input.trim().match(/^copy\s+(this file|that file|.+?)\s+to\s+(.+)$/i);
   if(copy){
     if(!projectInfo)throw new Error('Select a file in an authorized project first.');
@@ -57,7 +57,7 @@ async function contextualAction(input:string,task?:UserTask):Promise<string|null
   }
   if(!resolution)return null;
   // Only ask when there is a real choice between items; otherwise let the AI understand the request.
-  if('question' in resolution)return resolution.question.startsWith('Which one:')?resolution.question:null;
+  if('question' in resolution)return resolution.question.startsWith('Which one:')&&/\b(it|that|this|these|those|them|one|first|second|third|other)\b/i.test(input)?resolution.question:null;
   const {plan,entity}=resolution;
   let response:string;
   if(entity.kind==='file'){
@@ -79,7 +79,7 @@ async function contextualAction(input:string,task?:UserTask):Promise<string|null
       if(!['open','show'].includes(plan.operation)||plan.monitor)throw new Error('Installed apps can be launched here; window placement controls remain limited to supported Chrome and VS Code windows.');
       const appId=entity.id.slice('app:installed:'.length);
       await command('installed_app_open',{appId,name:entity.label},task);
-      response=`Windows accepted the launch request for ${entity.label}.`;
+      response=`${ack()} Opening ${entity.label}.`;
       conversationContext.observe(entity,plan,input);
       return response;
     }
@@ -160,11 +160,12 @@ function spokenSummary(text:string,limit:number){const clean=text.replace(/[*#`>
 // Timestamped voice stages in the activity log, for diagnosing latency.
 function voiceLog(stage:string){void state.activity('Voice: '+stage,new Date().toISOString());}
 // Commands the AI may run on the user's behalf after understanding free speech (all reversible or allowlisted).
-const AUTO_ACTIONS=new Set(['pod','task','task-delete','task-done','remember','recall','app-window','monitor','chrome','vscode','briefing','status','preference']);
+const AUTO_ACTIONS=new Set(['mute','site','working-on','wake','pod','task','task-delete','task-done','remember','recall','app-window','monitor','chrome','vscode','briefing','status','preference']);
 let pendingAction='';
 async function runUserText(input:string,event:Pick<Event,'isTrusted'>,directVoiceRequest=false,translated=false){
   lastInteraction=Date.now();
   if(directVoiceRequest)input=repairSpoken(input);
+  input=translateCommandWords(input); // Franco/Arabic command verbs → English commands
   const normalized=normalizeUtterance(input);
   if(native&&installedApps===null&&(/\b(open|launch|start)\b|^افتح/.test(normalized)))await loadInstalledApps(false);
   const result=await withUserTask(event,directScopes(input,conversationContext.snapshot(),projectInfo?.id,state.settings.workspacePresets,installedApps??[]),task=>answer(input,task,directVoiceRequest));
@@ -248,6 +249,9 @@ function soundSettings(){const p=sound.prefs();return `<section class="panel set
   ${sound.SLOTS.map(slot=>`<div class="sound-row" data-slot="${slot.id}"><div><strong>${slot.label}</strong><small>${slot.hint}</small><span class="sound-file" data-sound-name="${slot.id}">Checking…</span></div>
     <label class="sound-volume">Volume<input type="range" min="0" max="100" value="${Math.round(p.volume[slot.id]*100)}" data-sound-volume="${slot.id}" aria-label="${slot.label} volume"></label>
     <div class="button-row"><label class="secondary-button sound-pick">Choose file<input type="file" accept="audio/*,.mp3,.wav,.ogg,.m4a" data-sound-file="${slot.id}" hidden></label><button type="button" class="text-link" data-sound-test="${slot.id}">Test</button><button type="button" class="text-link" data-sound-remove="${slot.id}">Remove</button></div></div>`).join('')}
+  <div class="sound-mode"><label>Wake-up mode<select data-wake-mode aria-label="Wake-up mode">${(['cinematic','instant','silent'] as const).map(m=>`<option value="${m}"${(p.mode??'cinematic')===m?' selected':''}>${m==='cinematic'?'Cinematic — sound, animation, greeting':m==='instant'?'Instant — short reply only':'Silent — on-screen only'}</option>`).join('')}</select></label>
+    <label>Greeting starts after<input type="number" min="0" max="6000" step="100" value="${p.greetAtMs??1300}" data-greet-at aria-label="Greeting delay in milliseconds"> ms</label>
+    <button type="button" class="secondary-button" data-wake-preview>Preview full wake-up</button></div>
   <label class="check-row"><input type="checkbox" data-sound-silent ${p.silent?'checked':''}> Silent mode (no sounds or music)</label>
   <label class="check-row"><input type="checkbox" data-barge-in ${p.bargeIn?'checked':''}> Interrupt JARVIS by talking (use with headphones; on speakers say “JARVIS” or “stop”)</label>
 </section>`;}
@@ -341,6 +345,20 @@ function podSummary(kind:string){const now=Date.now();const open=state.list('tas
   const first=next[0],mins=Math.round((Date.parse(first.dueAt)-now)/60000);
   return `Next up: ${first.title}, ${mins<=0?'right now':mins<60?'in '+mins+' minutes':'at '+new Date(first.dueAt).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}.${next.length>1?' Then '+next[1].title+'.':''}`;}
 function flashPod(kind:string){if(page!=='hud')return;const el=document.querySelector(`.ws-${kind}`);if(!el)return;el.classList.remove('focus');void (el as HTMLElement).offsetWidth;el.classList.add('focus');setTimeout(()=>el.classList.remove('focus'),6000);}
+// Window awareness for "what am I working on?": sampled every 5 s, kept in memory only (never written to disk).
+const windowLog:{app:string;title:string;since:number;last:number}[]=[];let windowSampleFailed=false;
+const APP_NAMES:Record<string,string>={chrome:'Chrome',code:'VS Code',msedge:'Edge',firefox:'Firefox',explorer:'File Explorer',winword:'Word',excel:'Excel',powerpnt:'PowerPoint',spotify:'Spotify',discord:'Discord',whatsapp:'WhatsApp',windowsterminal:'Terminal',powershell:'PowerShell',cmd:'Command Prompt',notepad:'Notepad',acrord32:'Acrobat Reader',teams:'Teams',zoom:'Zoom',figma:'Figma',claude:'Claude'};
+const appName=(app:string)=>APP_NAMES[app.toLowerCase()]??app;
+async function sampleWindow(){if(!native)return;try{const w=await command<{title:string;app:string}|null>('active_window');if(!w)return;const now=Date.now(),top=windowLog[windowLog.length-1];
+  if(top&&top.app===w.app&&top.title===w.title)top.last=now;else{windowLog.push({app:w.app,title:w.title,since:now,last:now});if(windowLog.length>30)windowLog.shift();}}catch(error){if(!windowSampleFailed){windowSampleFailed=true;void state.activity('Window awareness unavailable',String(error).slice(0,200));}}}
+function cleanTitle(e:{app:string;title:string}){const name=appName(e.app);return e.title.replace(new RegExp('\\s*[-—|]\\s*(Google Chrome|Visual Studio Code|Microsoft​? Edge|Mozilla Firefox)$','i'),'').replace(/\s*-\s*Personal\s*-\s*Microsoft.*$/i,'')||name;}
+function workingOn(){const now=Date.now();if(!windowLog.length)return native?'I haven’t seen any other window yet this session, sir.':'Window awareness needs the installed Windows app.';
+  const mins=(ms:number)=>{const m=Math.round(ms/60000);return m<1?'under a minute':m===1?'a minute':m+' minutes';};
+  const cur=windowLog[windowLog.length-1],live=now-cur.last<15000;
+  const earlier=[...windowLog].reverse().filter(e=>e!==cur&&!(e.app===cur.app&&e.title===cur.title)).slice(0,2);
+  let text=live?`You're in ${appName(cur.app)}, on “${cleanTitle(cur)}”, for ${mins(cur.last-cur.since)}.`:`You were last in ${appName(cur.app)}, on “${cleanTitle(cur)}”.`;
+  if(earlier.length)text+=` Before that: ${earlier.map(e=>`${appName(e.app)} — “${cleanTitle(e)}”`).join(', then ')}.`;
+  return text;}
 let lastRendered='';
 function render() {
   document.body.classList.toggle('overview-page', page === 'dashboard');
@@ -434,6 +452,10 @@ async function answer(input:string,task?:UserTask,directVoiceRequest=false) {
     if(contextual!==null)response=contextual;
     else if(intent?.action==='skill-save')response=await saveVerifiedSkill(task);
     else if(intent?.action==='skill-list'){if(!native)throw new Error('Saved skill notes are available in the Windows desktop app.');const skills=await command<{title:string;trigger:string;steps:string[];sources:string[];verification:string}[]>('verified_skills_list');const nl=String.fromCharCode(10);response=skills.length?skills.map(s=>[s.title,'When: '+s.trigger,'Steps: '+s.steps.join(' → '),'Sources: '+(s.sources.join(', ')||'none recorded'),'Verification: '+s.verification].join(nl)).join(nl+nl):'No workflow skill notes have been saved yet.';}    else if(intent?.action==='remember'){const saved=await state.add('memory',{title:intent.text!.slice(0,240),body:intent.text!},task);conversationContext.observe(recordEntities([saved])[0]);response=`Got it, I'll remember that.`;}
+    else if(intent?.action==='wake'){if(intent.text==='instant')response='Yes, sir?';else{await cinematicWake();return;}}
+    else if(intent?.action==='working-on'){response=workingOn();}
+    else if(intent?.action==='mute'){muteRequested=true;replyEpoch++;await command('speech_stop').catch(()=>undefined);sound.stop('music',0);sound.stop('wake',0);return;}
+    else if(intent?.action==='site'){pendingAction='open '+intent.text;return;}
     else if(intent?.action==='pod'){response=podSummary(intent.text!);flashPod(intent.text==='weather'?'comms':intent.text!);}
     else if(intent?.action==='task-delete'||intent?.action==='task-done'){const open=state.list('task').filter(t=>!t.done);const hit=matchTask(intent.text??'',open);
       if(!hit)response=open.length?`I couldn’t find that one. Your open tasks: ${open.slice(0,5).map(t=>t.title).join(', ')}.`:'Your task list is already empty.';
@@ -484,9 +506,10 @@ async function answer(input:string,task?:UserTask,directVoiceRequest=false) {
       if(/^(?:jarvis[, ]+)?(?:i (?:really )?(?:like|love|prefer|hate|enjoy|don'?t like|usually|always|never)\b|my favou?rite\b|call me\b|i'?m allergic\b|(?:انا )?(?:بحب|بكره|مبحبش|بفضل)\b)/iu.test(input.trim())&&!state.list('memory').some(m=>m.body===input.trim()))void state.add('memory',{title:'Preference: '+input.trim().slice(0,200),body:input.trim().slice(0,1000)},task);const context=state.list('message').reverse().slice(directVoiceRequest?-4:['claude','hybrid'].includes(state.settings.aiMode)?-20:-8).map(m=>({role:m.role,content:m.body}));if(directVoiceRequest&&context.length)context[context.length-1]={...context[context.length-1],content:context[context.length-1].content+'\n\n(Spoken request: answer in one to three short sentences.)'};const terms=input.toLowerCase().split(/\s+/).filter(t=>t.length>3);const memories=(native?await command<Entry[]>('memory_search',{query:input.slice(0,150)}):state.list('memory').filter(m=>terms.some(t=>`${m.title} ${m.body}`.toLowerCase().includes(t)))).slice(0,4).map(m=>m.title+' '+m.body.slice(0,1000));memories.unshift(liveFacts());aiRequestId=crypto.randomUUID();partialAnswer='';streamSpeak=native&&shouldSpeakResponse(state.settings,directVoiceRequest);earlySpoken='';earlySpeech=null;const seeScreen=native&&/b(screen|on my (pc|computer|display)|what am i (looking at|seeing)|read this)b|شاش/i.test(input);response=await command<string>('ai_chat',{messages:context,memories,requestId:aiRequestId,seeScreen});
       const act=response.trim().match(/^(?:ACTION|Say)\s*:\s*["“']?(.+?)["”']?[.!]?\s*$/i);const understood=act?localIntent(act[1]):null;
       // The AI understood an action in the user's own words: run it instead of asking them to repeat it.
-      if(act&&understood&&AUTO_ACTIONS.has(understood.action)){pendingAction=act[1];return;}}
+      if(act&&understood&&AUTO_ACTIONS.has(understood.action)){pendingAction=act[1];return;}
+      if(act&&/^open https:\/\/[^\s]+$/i.test(act[1].trim())){pendingAction=act[1].trim();return;}}
     else response='I’m available for local commands, tasks, memories, and briefings. Advanced conversation needs an optional AI provider in Settings. No model is running in the background.';
-    await state.add('message',{title:'JARVIS',body:response.slice(0,32000),role:'assistant'});hudAnswer(response);if(shouldSpeakResponse(state.settings,directVoiceRequest)){try{const early=earlySpeech;streamSpeak=false;earlySpeech=null;if(early)await early;const rest=early&&response.startsWith(earlySpoken)?response.slice(earlySpoken.length).trim():response;earlySpoken='';const spoken=spokenSummary(rest,early?220:320);if(spoken)await speak(spoken);}catch(error){toast('Speech failed: '+String(error));}}
+    await state.add('message',{title:'JARVIS',body:response.slice(0,32000),role:'assistant'});hudAnswer(response);if(shouldSpeakResponse(state.settings,directVoiceRequest)){try{const epoch=replyEpoch;const early=earlySpeech;streamSpeak=false;earlySpeech=null;if(early)await early;const rest=early&&response.startsWith(earlySpoken)?response.slice(earlySpoken.length).trim():response;earlySpoken='';const spoken=spokenSummary(rest,early?220:320);if(spoken&&epoch===replyEpoch)await speak(spoken); /* skipped when interrupted or muted */}catch(error){toast('Speech failed: '+String(error));}}
   } catch(error) {
     const failure=spokenFailureMessage(error);
     await state.add('message',{title:'JARVIS',body:failure,role:'assistant'});hudAnswer(failure);
@@ -500,7 +523,7 @@ let hudTimer:ReturnType<typeof setTimeout>|undefined;
 function liveFacts(){const now=Date.now(),fmt=(d:string)=>new Date(d).toLocaleString([],{weekday:'short',hour:'numeric',minute:'2-digit'});
   const tasks=state.list('task').filter(t=>!t.done).slice(0,25).map(t=>t.title+(t.dueAt?' (due '+fmt(t.dueAt)+')':''));
   const events=state.list('event').filter(e=>e.dueAt&&Date.parse(e.dueAt)>now-3600000&&Date.parse(e.dueAt)<now+7*86400000).sort((a,b)=>a.dueAt.localeCompare(b.dueAt)).slice(0,15).map(e=>e.title+' ('+fmt(e.dueAt)+')');
-  return `LIVE DATA (complete and authoritative). Open tasks: ${tasks.length?tasks.join('; '):'none'}. Calendar next 7 days: ${events.length?events.join('; '):'nothing scheduled'}. User is viewing the ${page} page.`.slice(0,5800);}
+  return `LIVE DATA (complete and authoritative). Open tasks: ${tasks.length?tasks.join('; '):'none'}. Calendar next 7 days: ${events.length?events.join('; '):'nothing scheduled'}. User is viewing the ${page} page.${windowLog.length?` Recent windows (newest first, local awareness): ${[...windowLog].reverse().slice(0,5).map(e=>appName(e.app)+' — '+cleanTitle(e).slice(0,70)).join('; ')}.`:''}`.slice(0,5800);}
 function hudShow(question:string){if(page==='chat')return;const el=document.querySelector<HTMLElement>('#hud-reply');if(!el)return;clearTimeout(hudTimer);el.hidden=false;el.classList.remove('done');el.querySelector('.hud-you')!.textContent=question;el.querySelector('.hud-jarvis')!.innerHTML='<span class="hud-thinking"><i></i><i></i><i></i></span>';}
 function hudAnswer(text:string,streaming=false){if(page==='chat')return;const el=document.querySelector<HTMLElement>('#hud-reply');if(!el||el.hidden)return;el.querySelector('.hud-jarvis')!.textContent=text.replace(/[*#`]+/g,'').slice(0,700);clearTimeout(hudTimer);if(!streaming){el.classList.add('done');hudTimer=setTimeout(()=>{el.hidden=true;},Math.min(25000,6000+text.length*45));}}
 // Live alerts: the most important things right now, recomputed from local data on every refresh.
@@ -591,25 +614,40 @@ async function resumeWake() {if(!native||!desiredWake||voiceMode==='wake')return
 let conversing=false;
 // Cinematic wake-up: full sequence after 10 minutes of dormancy, at first wake, or on "wake up"; otherwise instant.
 let lastInteraction=0;
+let waking=false;
 async function cinematicWake(){
-  lastInteraction=Date.now();
-  if(!(await sound.play('activation')))sound.synthTone();
-  if(page!=='hud')go('hud');
-  document.body.classList.remove('ws-booted');render();
-  void sound.play('music',{fadeInMs:1500,loop:true});
-  await new Promise(r=>setTimeout(r,1300));
-  const h=new Date().getHours(),part=h<12?'Good morning':h<18?'Good afternoon':'Good evening';
-  const open=state.list('task').filter(t=>!t.done).length,cpu=telemetry?.cpu;
-  const name=state.settings.name.toLowerCase()==='sir'?'':state.settings.name;
-  const lines=[`${part}, sir. At your service.`,name?`Welcome back, ${name}. Your workspace is ready.`:`${part}, sir. Your workspace is ready.`];
-  let status=cpu!=null&&cpu>85?` The processor is busy at ${Math.round(cpu)} percent.`:'';
-  if(open)status+=` You have ${open} open task${open>1?'s':''}.`;
-  await speak(lines[new Date().getMinutes()%lines.length]+status).catch(()=>undefined);
-  sound.stop('music',2500);
+  if(waking)return; // a second "wake up" while one is running must not overlap
+  waking=true;
+  try{
+    lastInteraction=Date.now();
+    const p=sound.prefs(),mode=p.silent?'silent':p.mode??'cinematic';
+    const h=new Date().getHours(),part=h<12?'Good morning':h<18?'Good afternoon':'Good evening';
+    const open=state.list('task').filter(t=>!t.done).length,cpu=telemetry?.cpu;
+    const name=state.settings.name.toLowerCase()==='sir'?'':state.settings.name;
+    const lines=[`${part}, sir. At your service.`,name?`Welcome back, ${name}. Your workspace is ready.`:`${part}, sir. Your workspace is ready.`];
+    let status=cpu!=null&&cpu>85?` The processor is busy at ${Math.round(cpu)} percent.`:'';
+    if(open)status+=` You have ${open} open task${open>1?'s':''}.`;
+    const greeting=lines[new Date().getMinutes()%lines.length]+status;
+    if(page!=='hud')go('hud');
+    if(mode==='silent'){hudAlert(greeting);return;}
+    if(mode==='instant'){await speak('Yes, sir?').catch(()=>undefined);return;}
+    // Cinematic: the boot animation starts exactly when the wake sound actually starts playing.
+    const started=(await sound.play('wake'))||(await sound.play('activation'));
+    voiceLog(started?'wake sound playing':'wake tone (no file)');
+    if(!started)sound.synthTone();
+    document.body.classList.remove('ws-booted');render();
+    void sound.play('music',{fadeInMs:1500,loop:true});
+    await new Promise(r=>setTimeout(r,started?(p.greetAtMs??1300):900));
+    await speak(greeting).catch(()=>undefined);
+    sound.stop('music',2500);
+  }finally{waking=false;}
 }
+
 // Barge-in: during a voice conversation the next sentence is already being recorded while JARVIS talks,
 // so the user can cut in at any moment, the way you would with a person.
-let voiceSession=false,pendingCapture:Promise<string>|null=null;
+let voiceSession=false,pendingCapture:Promise<string>|null=null,muteRequested=false;
+// Bumped by "JARVIS"-interrupts and "mute": queued pieces of the current reply are dropped instead of spoken.
+let replyEpoch=0;
 const ATTENTION_MS=60000;
 async function converse(){
   if(!native||!desiredWake||conversing)return;
@@ -625,7 +663,7 @@ async function converse(){
       finally{voiceMode='';}
       if(text)lastHeard=Date.now();
       if(request!==speechRequest||!text||/^(stop|thanks|thank you|that'?s all|that is all|that'?ll be all|that will be all|goodbye|never ?mind|mute|be quiet|quiet|shut up|silence|enough|شكرا|خلاص|اسكت|بس)\b/i.test(text.replace(/^jarvis[,. ]*/i,''))){await command('speech_stop').catch(()=>{});break;}
-      try{await runUserText(text,{isTrusted:true},true);}catch(error){void state.activity('Voice request failed',String(error).slice(0,300));break;}
+      try{await runUserText(text,{isTrusted:true},true);if(muteRequested){muteRequested=false;break;}}catch(error){void state.activity('Voice request failed',String(error).slice(0,300));break;}
     }
   }finally{conversing=false;voiceSession=false;pendingCapture=null;aiState='Ready';render();}
 }
@@ -669,8 +707,11 @@ document.addEventListener('input',e=>{const input=e.target as HTMLInputElement;i
 document.addEventListener('change',e=>{const t=e.target as HTMLInputElement;
   if(t.dataset.soundFile&&t.files?.[0]){void run(async()=>{await sound.importAudio(t.dataset.soundFile as sound.Slot,t.files![0]);toast('Sound saved on this PC.');await refreshSoundNames();});}
   else if(t.dataset.soundVolume){const p=sound.prefs();p.volume[t.dataset.soundVolume as sound.Slot]=Number(t.value)/100;sound.savePrefs(p);}
+  else if('wakeMode' in t.dataset){const p=sound.prefs();p.mode=(t as unknown as HTMLSelectElement).value as sound.WakeMode;sound.savePrefs(p);}
+  else if('greetAt' in t.dataset){const p=sound.prefs();p.greetAtMs=Math.max(0,Math.min(6000,Number(t.value)||0));sound.savePrefs(p);}
   else if('bargeIn' in t.dataset){const p=sound.prefs();p.bargeIn=t.checked;sound.savePrefs(p);}
   else if('soundSilent' in t.dataset){const p=sound.prefs();p.silent=t.checked;sound.savePrefs(p);if(p.silent)sound.stop('music');}});
+document.addEventListener('click',e=>{if((e.target as HTMLElement).closest('[data-wake-preview]')){void cinematicWake();return;}});
 document.addEventListener('click',e=>{const sb=(e.target as HTMLElement).closest<HTMLElement>('[data-sound-test],[data-sound-remove]');
   if(sb){const slot=(sb.dataset.soundTest??sb.dataset.soundRemove) as sound.Slot;if(sb.dataset.soundTest)void sound.play(slot).then(ok=>{if(!ok){if(slot==='activation')sound.synthTone();else toast('No file set for this sound.');}else if(slot==='music')setTimeout(()=>sound.stop('music',1200),6000);});else void run(async()=>{await sound.removeAudio(slot);await refreshSoundNames();});return;}});
 document.addEventListener('click',e=>{const el=(e.target as HTMLElement).closest<HTMLElement>('button,[data-page]');if(!el)return;if(el.dataset.page){go(el.dataset.page);return;}if(el.dataset.suggest){const text=el.dataset.suggest;void run(()=>runUserText(text,e));return;}if(el.dataset.new){editor(el.dataset.new as EntryKind);return;}if(el.dataset.edit){const record=state.records.find(r=>r.id===el.dataset.edit);if(record){editor(record.kind,record);const entity=recordEntities([record])[0];if(entity)conversationContext.observe(entity);}return;}void run(async()=>{
@@ -754,6 +795,9 @@ async function init() {
       if(aiState==='Speaking'&&(value.confidence??1)<0.8){voiceLog('wake word ignored: own voice');return;}
       // Already recording the user: a second "JARVIS" must not cancel and restart the capture (that dropped requests).
       if(voiceMode==='ptt'){voiceLog('wake word ignored: already listening');return;}
+      // Mid-conversation, "JARVIS" only stops the current reply; the conversation's own capture takes the next words
+      // (starting a second capture here cancelled the first and lost the command, seen live with "Mute").
+      if(conversing&&!/wake|morning|are you there/.test((value.text??'').toLowerCase())){voiceLog('wake word: interrupt reply');speechRequest++;replyEpoch++;void command('speech_stop').catch(()=>undefined);sound.stop('music',0);return;}
       voiceLog('wake word heard');const wakeText=(value.text??'').toLowerCase();// Only an explicit wake-up phrase plays the cinematic sequence; "JARVIS, do X" must go straight to X (live test: the greeting talked over the command).
       const fullWake=/wake|morning|are you there/.test(wakeText);lastInteraction=Date.now();speechRequest++;speechFallbackAttempted=false;activeVoiceId='';void run(async()=>{await command('speech_stop');voiceMode='';if(!desiredWake)return;if(fullWake)await cinematicWake();else if(page!=='hud'&&page!=='dashboard')go('hud');if(await shouldUseLocalWhisper()){await listenOffline();}else{activeVoiceId=await command<string>('voice_start',{mode:'ptt',language:state.settings.language});voiceMode='ptt';aiState='Listening';render();}await openOverviewFullscreen(()=>go('hud'));});return;}if(value.type==='ready'){aiState=voiceMode==='wake'?'Wake word armed':'Listening';if(value.fallback&&value.language)toast('Using installed '+value.language+' speech recognizer because '+value.requestedLanguage+' is unavailable.');render();}if(value.type==='level'){document.documentElement.style.setProperty('--audio-level',String(Math.min(1,(value.level??0)/100)));return;}if(value.type==='transcript'&&value.text){const transcript=value.text;activeVoiceId='';toast('I heard: '+transcript.slice(0,120));voiceMode='';void run(()=>handleVoiceTranscript(transcript));}if(value.type==='unrecognized'&&voiceMode==='ptt'){activeVoiceId='';voiceMode='';aiState='Ready';render();void run(async()=>{if(!speechFallbackAttempted&&state.settings.sttEngine==='sapi'){speechFallbackAttempted=true;try{const status=await command<{installed:boolean}>('offline_speech_status');if(shouldRetryWithWhisper(state.settings.sttEngine,status.installed,false)){toast('Windows speech could not recognize that. Offline Whisper is listening now; please repeat your request.');await listenOffline();return;}}catch{}}toast(value.reason??"I didn?t catch that. Check the microphone, then try one short sentence again.");try{await speak('I did not catch that. Please try again.');}catch(error){toast('Speech failed: '+String(error));}});}if(value.type==='error'){const wasListening=voiceMode==='ptt';document.documentElement.style.setProperty('--audio-level','0');voiceMode='';voiceFailure=value.error??'Speech recognition unavailable.';aiState='Ready';toast('Microphone error: '+voiceFailure);render();if(wasListening)void run(async()=>{try{await speak('I could not start listening. Please check the selected speech language and microphone.');}catch(error){toast('Speech failed: '+String(error));}});}if(value.type==='stopped'){document.documentElement.style.setProperty('--audio-level','0');let recovery=voiceStopRecovery(desiredWake,voiceMode as 'wake'|'ptt'|'');if(recovery==='attention'&&!voiceFailure&&wakeRestarts<3){wakeRestarts++;recovery='rearm';}voiceMode='';if(recovery==='rearm'&&!voiceFailure){aiState='Rearming wake word';render();window.setTimeout(()=>{if(!desiredWake||voiceMode)return;void run(async()=>{try{await resumeWake();}catch(error){voiceFailure=String(error);voiceMode='';aiState='Ready';render();toast('Wake-word listener failed: '+voiceFailure);}});},300);}else if(recovery!=='idle'){voiceFailure=voiceFailure||'The wake-word listener stopped unexpectedly.';toast('Wake-word listener stopped: '+voiceFailure);aiState='Ready';render();}else{aiState='Ready';render();}}if(value.type==='listening'){aiState='Listening';render();}});
     void refreshTelemetry();void run(refreshSecurity);void run(async()=>{tools=await command('tools_status');render();});
@@ -764,7 +808,7 @@ async function init() {
   function tickClock(){if(!document.hidden&&!nativeHidden)updateClock();setTimeout(tickClock,60000-Date.now()%60000+10);}setTimeout(tickClock,60000-Date.now()%60000+10);
   setInterval(()=>{void refreshTelemetry();if(native&&!document.hidden&&!nativeHidden&&Date.now()-lastSecurity>300000)void run(refreshSecurity);},5000);
   setInterval(()=>void run(reminders),15000);void run(reminders);
-  setInterval(()=>void proactive(),15000);setTimeout(()=>void greetOnline(),6000);
+  setInterval(()=>void proactive(),15000);setInterval(()=>void sampleWindow(),5000);setTimeout(()=>void greetOnline(),6000);
   // Minimised or in the tray: freeze all motion so JARVIS costs ~0% CPU in the background.
   document.addEventListener('visibilitychange',()=>document.body.classList.toggle('app-idle',document.hidden));
 }

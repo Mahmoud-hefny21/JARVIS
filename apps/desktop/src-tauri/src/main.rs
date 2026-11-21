@@ -766,6 +766,64 @@ async fn speak(
         result
     }).await
 }
+/// The window the owner is using right now (title + program), for "what am I working on?".
+/// Read on demand only; nothing is stored on disk. JARVIS's own window is skipped and
+/// private-browsing / password-manager windows are reported without their title.
+#[tauri::command]
+fn active_window() -> Result<Option<Value>> {
+    use windows_sys::Win32::System::Threading::{OpenProcess, QueryFullProcessImageNameW, PROCESS_QUERY_LIMITED_INFORMATION};
+    use windows_sys::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowTextW, GetWindowThreadProcessId};
+    unsafe {
+        let hwnd = GetForegroundWindow();
+        if hwnd.is_null() {
+            return Ok(None);
+        }
+        let mut buf = [0u16; 512];
+        let len = GetWindowTextW(hwnd, buf.as_mut_ptr(), buf.len() as i32);
+        let title = String::from_utf16_lossy(&buf[..len.max(0) as usize]);
+        let mut pid = 0u32;
+        GetWindowThreadProcessId(hwnd, &mut pid);
+        let mut app = String::new();
+        let process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+        if !process.is_null() {
+            let mut path = [0u16; 1024];
+            let mut size = path.len() as u32;
+            if QueryFullProcessImageNameW(process, 0, path.as_mut_ptr(), &mut size) != 0 {
+                let full = String::from_utf16_lossy(&path[..size as usize]);
+                app = std::path::Path::new(&full).file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+            }
+            windows_sys::Win32::Foundation::CloseHandle(process);
+        }
+        if title.is_empty() || pid == std::process::id() || app.eq_ignore_ascii_case("jarvis-desktop") {
+            return Ok(None);
+        }
+        let private = ["inprivate", "incognito", "private browsing", "keepass", "1password", "bitwarden", "password", "credential"]
+            .iter()
+            .any(|w| title.to_lowercase().contains(w) || app.to_lowercase().contains(w));
+        let title: String = if private { "(private window)".into() } else { title.chars().take(160).collect() };
+        Ok(Some(serde_json::json!({ "title": title, "app": app })))
+    }
+}
+/// Owner-provided sounds kept in the app data folder (never in the repo or installer).
+/// Only fixed slot names are accepted, so no other file can be read through this command.
+#[tauri::command]
+fn sound_asset(app: tauri::AppHandle, slot: String) -> Result<Option<String>> {
+    use base64::Engine;
+    if !["wake", "activation", "music", "notify"].contains(&slot.as_str()) {
+        return Err("Unknown sound slot".into());
+    }
+    let dir = app.path().app_data_dir().map_err(|_| "App data folder unavailable")?.join("sounds");
+    for (ext, mime) in [("wav", "audio/wav"), ("mp3", "audio/mpeg")] {
+        let file = dir.join(format!("{slot}.{ext}"));
+        let Ok(meta) = std::fs::metadata(&file) else { continue };
+        if meta.len() > 40 * 1024 * 1024 {
+            return Err("Sound file is larger than 40 MB".into());
+        }
+        let bytes = std::fs::read(&file).map_err(|_| "Cannot read the sound file")?;
+        return Ok(Some(format!("data:{mime};base64,{}", base64::engine::general_purpose::STANDARD.encode(bytes))));
+    }
+    Ok(None)
+}
 #[tauri::command]
 fn speech_stop(state: tauri::State<NativeState>) -> Result<()> {
     let _setup = state
@@ -971,6 +1029,8 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            sound_asset,
+            active_window,
             actions::action_prepare,
             actions::action_execute,
             actions::action_cancel,

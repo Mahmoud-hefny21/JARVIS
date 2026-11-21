@@ -45,7 +45,7 @@ Last updated: 2026-11-21 (commit after `428e7cf`).
 |---|---|---|
 | Natural British voice (Ryan, neural) | ✅ | Windows natural voice |
 | Sounds human: no filler sign-offs, varied openings, few "sir"s | ✅ | Persona rules |
-| Owner name Mahmoud; greetings rotate "sir" / "Welcome back, Mahmoud" | ✅ | |
+| Address the owner as "sir" (Mahmoud's request, 2026-11-22) | ✅ | Name stored as "Sir"; AI told not to use the first name |
 | Interrupt JARVIS by talking over it | 🟡 | Opt-in in Settings (headphones). On laptop speakers JARVIS interrupted itself in live tests, so it is off by default; saying "JARVIS" interrupts on speakers |
 | "Sir?" when called by name with nothing after | ✅ | Live-tested |
 | 60-second attention window, then idle until wake word | ✅ | |
@@ -63,9 +63,12 @@ Last updated: 2026-11-21 (commit after `428e7cf`).
 | Tasks by voice: add with due time, delete, complete | ✅ | Live-tested |
 | Move Chrome / VS Code between monitors, focus, minimize | ✅ | Live-tested |
 | "Show me tasks / next / mail / weather / system status" brings the pod forward | ✅ | |
-| Control any app or website | 🟡 | Open installed apps, Chrome page read/click/fill; not arbitrary apps |
+| Open any website or installed app by name | ✅ | 25+ sites by name, any other via the AI's exact address; WhatsApp Web and YouTube live-tested; Start-menu apps by name |
+| Control inside arbitrary apps (click, type) | 🟡 | Chrome page read/click/fill only |
+| Franco and Arabic command words (efta7, eftahly, افتح, شغل, emsa7, fakarny…) | ✅ | Unit-tested; AI also told to read Franco |
+| "Mute" silences JARVIS immediately | ✅ | Live-tested; also drops queued parts of the reply |
 | Multi-step agent: plan → permissions → execute → verify → report | ⬜ | |
-| "What am I working on?" from active window | ⬜ | |
+| "What am I working on?" / "ana kont ba3mel eh" from the active window | ✅ | Live-tested ("You were last in Chrome…"); titles kept in memory only; private windows hidden |
 | Review code open in VS Code | 🟡 | Read-only code assistant on authorized projects |
 | Screen awareness on demand | 🟡 | "Read this / what's on my screen" with approval |
 | Persistent screen awareness with indicator and pause | ⬜ | |
@@ -93,6 +96,7 @@ Last updated: 2026-11-21 (commit after `428e7cf`).
 | Low battery / sustained high CPU warnings | ✅ | |
 | Daily greeting with weather, next event, tasks | ✅ | |
 | Morning and evening briefings with project and business data | 🟡 | Briefing exists; no business data yet |
+| Owner's film wake-up sound (5.784 s trim of the supplied MP3) | ✅ | Kept on this PC only, never in the repo; Cinematic / Instant / Silent modes |
 | Build-failed / website-down alerts | ⬜ | Needs project and website monitoring |
 
 ## 7. Security
@@ -131,3 +135,7 @@ These need outside services, accounts or money, so each requires Mahmoud's decis
 5. Project and website monitoring (GitHub).
 6. Decide hosting, then the remote coordinator and iPhone companion.
 7. Business Command Center, then communication, proposals and payments.
+
+## Standing rule
+
+Everything must be free: no paid AI, APIs, hosting or telephony (Mahmoud, 2026-11-22). Items in section 8 that need paid services stay ⛔ unless a free option exists (e.g. WhatsApp Web instead of the WhatsApp Business API).

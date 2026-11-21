@@ -141,6 +141,16 @@ export function localIntent(input: string): { action: string; text?: string } | 
   if (del && /task|reminder|todo|تاسك|مهمة|المهمة|التاسك|^(?:delete|remove|cancel) (?:it|that|this)$/u.test(t)) return { action: 'task-delete', text: del[1].trim() };
   const done = t.match(/^(?:complete|finish|finished|done with|mark|tick off|check off|i (?:did|finished|completed))\s+(?:the\s+|my\s+)?(?:task\s+)?(.*?)(?:\s+(?:task|as done|as complete|done))*$/) || t.match(/^(?:خلصت|خلّصت|عملت)\s+(.*)$/u);
   if (done && done[1].trim()) return { action: 'task-done', text: done[1].trim() };
+  // "Mute" / "stop talking": silence immediately, wherever it is heard.
+  if (/^(?:mute|be quiet|quiet|shut up|silence|stop talking|stop|enough|hush|اسكت|بس اسكت|خلاص اسكت|uskut|eskot)$/u.test(t)) return { action: 'mute' };
+  // "Open my WhatsApp Web (in Chrome)": well-known sites by name; anything else goes to the AI, which answers with the address.
+  const siteMatch = t.match(/^(?:open|launch|go to|bring up|pull up|start)\s+(?:up\s+)?(?:my\s+|the\s+)?(.+?)(?:\s+(?:web|website|site|page))?(?:\s+(?:in|on|from|with)\s+(?:my\s+)?(?:chrome|the browser|browser|edge))?$/);
+  if (siteMatch) { const url = siteUrl(siteMatch[1]); if (url) return { action: 'site', text: url }; }
+  // "What am I working on?" in English, Franco-Arabic and Arabic.
+  if (/^(?:what (?:am|was) i (?:working on|doing)|what have i been (?:working on|doing)|what was i just doing|where was i|ana kont ba3mel eh|ana ba3mel eh|kont ba3mel eh)$/.test(t) || /(?:كنت بعمل ايه|بعمل ايه|كنت فين)/u.test(t)) return { action: 'working-on' };
+  // Wake-up phrases work wherever they are heard (wake listener, conversation, or typed).
+  if (/^(?:hey |ok )?(?:wake up,? jarvis|jarvis,? wake up|good morning,? jarvis|jarvis,? are you there|are you there,? jarvis|wake up)$/.test(t)) return { action: 'wake' };
+  if (/^(?:hey |ok )?jarvis$/.test(t)) return { action: 'wake', text: 'instant' };
   // "Show me my tasks" / "what's next" / "read my mail": the hologram comes to the user, JARVIS summarises it.
   const pod = t.match(/^(?:show|show me|what are|what's|whats|what is|list|read|check|pull up|bring up)\s+(?:me\s+)?(?:my\s+|the\s+)?(tasks|task list|to ?dos?|schedule|calendar|agenda|next|mail|emails|inbox|weather)(?:\s+(?:today|now|for today))?$/)
     || (/^(?:what do i have(?: today)?|what's on my plate|whats on my plate|what's coming up|whats coming up)$/.test(t) ? ['', 'next'] : null);
@@ -265,4 +275,34 @@ export function onlineGreeting(name: string, hour: number, openTasks: { title: s
   if (nextEvent) bits.push(`Next on your calendar: ${nextEvent.title} at ${new Date(nextEvent.dueAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.`);
   bits.push(openTasks.length ? `You have ${openTasks.length} open task${openTasks.length === 1 ? '' : 's'}${openTasks.length <= 2 ? ': ' + openTasks.map(t => t.title).join(' and ') : ''}.` : 'Your task list is clear.');
   return bits.join(' ');
+}
+
+/** Well-known websites by spoken name; free sites only, opened in the user's own browser. */
+const SITES: [RegExp, string][] = [
+  [/^(?:whats ?app(?: web)?|واتساب|واتس|الواتس)$/u, 'https://web.whatsapp.com'], [/^(?:you ?tube|يوتيوب|اليوتيوب)$/u, 'https://www.youtube.com'], [/^(?:g ?mail|my (?:e-?mail|inbox)|جيميل|الايميل)$/u, 'https://mail.google.com'], [/^(?:فيسبوك|الفيس)$/u, 'https://www.facebook.com'],
+  [/^google$/, 'https://www.google.com'], [/^git ?hub$/, 'https://github.com'], [/^chat ?gpt$/, 'https://chatgpt.com'], [/^claude(?: ai)?$/, 'https://claude.ai'],
+  [/^facebook$/, 'https://www.facebook.com'], [/^instagram$/, 'https://www.instagram.com'], [/^(?:twitter|x)$/, 'https://x.com'], [/^linked ?in$/, 'https://www.linkedin.com'],
+  [/^netflix$/, 'https://www.netflix.com'], [/^spotify(?: web)?$/, 'https://open.spotify.com'], [/^(?:google )?drive$/, 'https://drive.google.com'],
+  [/^(?:google )?calendar$/, 'https://calendar.google.com'], [/^(?:google )?maps$/, 'https://maps.google.com'], [/^(?:google )?translate$/, 'https://translate.google.com'],
+  [/^outlook$/, 'https://outlook.live.com'], [/^stack ?overflow$/, 'https://stackoverflow.com'], [/^reddit$/, 'https://www.reddit.com'], [/^tik ?tok$/, 'https://www.tiktok.com'],
+  [/^telegram(?: web)?$/, 'https://web.telegram.org'], [/^discord(?: web)?$/, 'https://discord.com/app'], [/^vercel$/, 'https://vercel.com/dashboard'], [/^figma$/, 'https://www.figma.com'],
+];
+export function siteUrl(name: string): string | null {
+  const n = name.trim().toLowerCase().replace(/[.!?]+$/, '').replace(/(?:\s+(?:for me|please|now|real quick))+$/, '').replace(/\s+(?:web|website|site|page)$/, ' web').replace(/ web$/, (m) => m);
+  for (const [re, url] of SITES) if (re.test(n)) return url;
+  return null;
+}
+
+/** Franco-Arabic and Arabic command words → the English verbs the command system understands. */
+const COMMAND_WORDS: [RegExp, string][] = [
+  [/^(?:(?:ya |hey )?jarvis[,.!\s]+)?(?:efta[7h](?:ly|li|lia)?|eft7(?:ly|li)?|aft[a]?[7h](?:ly|li)?|ftah|ifta[7h]|افتح|افتحلي|افتح لي|شغل|شغلي|شغّل|sha[g8]h?al|sha8l|shaghal)(?:\s+(?:li|ly|lia|لي))?\s+/iu, 'open '],
+  [/^(?:(?:ya |hey )?jarvis[,.!\s]+)?(?:e2fel|2fel|ekfel|i2fel|اقفل|اقفلي|سكر)\s+/iu, 'close '],
+  [/^(?:(?:ya |hey )?jarvis[,.!\s]+)?(?:emsa[7h]|im?sa7|امسح|احذف|شيل)\s+/iu, 'delete '],
+  [/^(?:(?:ya |hey )?jarvis[,.!\s]+)?(?:dawar(?: 3la| ala)?|dawwar|دور على|دور|ابحث عن)\s+/iu, 'search for '],
+  [/^(?:(?:ya |hey )?jarvis[,.!\s]+)?(?:fakarny|fakkarni|فكرني)\s+/iu, 'remind me to '],
+];
+export function translateCommandWords(input: string): string {
+  const text = input.trim();
+  for (const [re, verb] of COMMAND_WORDS) if (re.test(text)) return text.replace(re, verb).replace(/\b(?:el|al)\s+/i, '').replace(/^open (?:el|al)-?/i, 'open ');
+  return text;
 }

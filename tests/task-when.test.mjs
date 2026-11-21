@@ -79,3 +79,30 @@ test('no heads-up for a task created a moment ago', () => {
   assert.deepEqual(headsUp(rec, now, new Set()), []);
   assert.equal(headsUp(rec, new Date(now.getTime() + 120000), new Set())[0].text, "Sir, it's time. Drink water.");
 });
+test('wake-up and "what am I working on" phrases', () => {
+  assert.deepEqual(localIntent('Wake up, Jarvis.'), { action: 'wake' });
+  assert.deepEqual(localIntent('Jarvis, wake up!'), { action: 'wake' });
+  assert.deepEqual(localIntent('JARVIS'), { action: 'wake', text: 'instant' });
+  for (const said of ['What am I working on?', 'Jarvis, ana kont ba3mel eh?', 'what was I doing', 'انا كنت بعمل ايه']) assert.deepEqual(localIntent(said), { action: 'working-on' }, said);
+  assert.equal(localIntent('Jarvis, open chrome').action, 'chrome');
+});
+import { siteUrl } from '../packages/shared/model.ts';
+test('open websites by name, and mute', () => {
+  for (const said of ['Open WhatsApp for me.', 'Open WhatsApp web from my Chrome.', 'open my whatsapp web', 'Jarvis, open WhatsApp web please'])
+    assert.deepEqual(localIntent(said), { action: 'site', text: 'https://web.whatsapp.com' }, said);
+  assert.equal(localIntent('open youtube').text, 'https://www.youtube.com');
+  assert.equal(localIntent('open chrome').action, 'chrome');
+  assert.equal(siteUrl('some unknown thing'), null);
+  for (const said of ['Mute.', 'Jarvis, mute', 'stop talking', 'اسكت']) assert.deepEqual(localIntent(said), { action: 'mute' }, said);
+});
+import { translateCommandWords } from '../packages/shared/model.ts';
+test('Franco and Arabic command words', () => {
+  assert.equal(translateCommandWords('efta7 whatsapp'), 'open whatsapp');
+  assert.equal(translateCommandWords('Jarvis, eftahly youtube'), 'open youtube');
+  assert.equal(localIntent(translateCommandWords('افتح يوتيوب')).text, 'https://www.youtube.com');
+  assert.equal(translateCommandWords('jarvis aft7 spotify'), 'open spotify');
+  assert.equal(translateCommandWords('افتح يوتيوب'), 'open يوتيوب');
+  assert.equal(translateCommandWords('shaghal el spotify'), 'open spotify');
+  assert.equal(translateCommandWords('fakarny a2ra el ketab bokra'), 'remind me to a2ra ketab bokra');
+  assert.equal(localIntent(translateCommandWords('efta7 el whatsapp web')).text, 'https://web.whatsapp.com');
+});
