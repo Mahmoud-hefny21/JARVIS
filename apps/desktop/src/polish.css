@@ -189,3 +189,67 @@ body[data-ai="error"] .ws-heart{background:radial-gradient(circle,#fff1d6 0,#ffc
 body[data-ai="error"] .ws-state{color:#ffc76a}
 body[data-ai="offline"] .ws-core{filter:saturate(.3) brightness(.6)}
 body[data-ai="offline"] .ws-state::after{content:" · OFFLINE"}
+
+/* ===== Workshop v2: six live pods, gauges, parallax ===== */
+.ws-next{grid-column:1;grid-row:1}.ws-activity{grid-column:1;grid-row:2;justify-self:end}.ws-tasks{grid-column:1;grid-row:3}
+.ws-system{grid-column:3;grid-row:1}.ws-health{grid-column:3;grid-row:2;justify-self:start}.ws-comms{grid-column:3;grid-row:3}
+.workshop{grid-template-rows:1fr auto 1fr;row-gap:14px}
+.ws-next,.ws-tasks{align-self:end}.ws-system,.ws-comms{align-self:start}
+.ws-next,.ws-system{align-self:end}.ws-tasks,.ws-comms{align-self:start}
+.ws-sub{font-size:11px!important;color:#5f9db4!important;margin-top:6px!important;letter-spacing:.02em}
+.ws-gauges{display:flex;gap:14px}
+.ws-gauge{position:relative;width:62px;text-align:center}
+.ws-gauge svg{width:62px;height:62px;transform:rotate(-90deg)}
+.ws-gauge .track{fill:none;stroke:#0e3a4c;stroke-width:4}
+.ws-gauge .fill{fill:none;stroke:#35d6ff;stroke-width:4;stroke-linecap:round;transition:stroke-dashoffset .9s cubic-bezier(.2,.8,.2,1),stroke .4s;filter:drop-shadow(0 0 4px #35d6ff88)}
+.ws-gauge.hot .fill{stroke:#ffb547;filter:drop-shadow(0 0 4px #ffb54788)}
+.ws-gauge b{position:absolute;top:19px;left:0;right:0;font-size:17px;font-weight:500;color:#e8fbff}
+.ws-gauge b small{font-size:10px;color:#8fc3d6}
+.ws-gauge span{display:block;margin-top:2px!important;font-size:9px!important;letter-spacing:.22em;color:#5fb6d1!important}
+.ws-checks,.ws-log{list-style:none;margin:0;padding:0;font-size:13px;color:#a9d6e6}
+.ws-checks li{display:flex;justify-content:space-between;gap:24px;padding:2px 0}
+.ws-checks li::before{content:none}
+.ws-checks em{font-style:normal;color:#8fc3d6}.ws-checks em.on{color:#7ff0c8}.ws-checks em.off{color:#ff9b8a}
+.ws-log li{display:flex;gap:10px;padding:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ws-log li::before{content:none}
+.ws-log time{color:#3fb7d8;font-size:11px;min-width:28px}
+.ws-activity,.ws-health{width:min(300px,100%);opacity:.92}
+/* Parallax: the core leans gently toward the pointer */
+.ws-core{transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .5s cubic-bezier(.2,.8,.2,1);transform-style:preserve-3d}
+/* Heavy CPU load: decorative layers step back */
+body.heavy-load .ws-radar,body.heavy-load .ws-legend{display:none}
+body.heavy-load .ws-seg{animation-play-state:paused}
+/* Short screens (laptop 720p): compact pods, activity hidden */
+@media (max-height:820px){.ws-pod{padding:10px 14px 12px}.ws-pod strong{font-size:16px}.ws-gauge{width:50px}.ws-gauge svg{width:50px;height:50px}.ws-gauge b{top:14px;font-size:14px}.ws-activity{display:none}}
+@media (max-width:900px){.ws-activity,.ws-health{width:auto}}
+
+/* ===== Workshop design language on every page ===== */
+:root{--ws-edge:#1b6582;--ws-glow:#35d6ff;--ws-bracket:#5be7ff}
+body:not(.workshop-page) .workspace{background:radial-gradient(ellipse at 50% 40%,#06283c80,transparent 62%),radial-gradient(ellipse at 50% 120%,#04304680,transparent 55%),#020a12}
+/* Panels become holographic pods: glass, cut corners, corner brackets */
+body:not(.workshop-page) .panel{position:relative;border:1px solid var(--ws-edge);border-radius:4px;
+  background:
+    linear-gradient(var(--ws-bracket),var(--ws-bracket)) 5px 5px/12px 2px no-repeat,
+    linear-gradient(var(--ws-bracket),var(--ws-bracket)) 5px 5px/2px 12px no-repeat,
+    linear-gradient(var(--ws-bracket),var(--ws-bracket)) calc(100% - 5px) calc(100% - 5px)/12px 2px no-repeat,
+    linear-gradient(var(--ws-bracket),var(--ws-bracket)) calc(100% - 5px) calc(100% - 5px)/2px 12px no-repeat,
+    linear-gradient(160deg,#06202ecc,#031119ee);
+  box-shadow:inset 0 0 0 1px #0a3446,0 0 34px #0ab8ef14;
+  clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px))}
+body:not(.workshop-page) .panel-heading{border-bottom:1px solid #0f3a4d;background:linear-gradient(90deg,#0a2a3a99,transparent 70%)}
+body:not(.workshop-page) .panel-heading h2,body:not(.workshop-page) .panel-heading strong{letter-spacing:.14em;text-transform:uppercase;font-size:11px;color:#57c9e8;font-weight:600}
+/* Page titles glow like the HUD */
+.page-heading h1{font-weight:400;letter-spacing:.02em;text-shadow:0 0 18px #2fd0ff40}
+.page-heading .eyebrow,.eyebrow{letter-spacing:.32em;color:#3fb7d8}
+/* Sidebar as a glass rail with a lit bracket on the active item */
+.sidebar{background:linear-gradient(170deg,#04182499,#020a12f2);backdrop-filter:none;border-right:1px solid #12465c}
+.nav-item{border:1px solid transparent;border-radius:3px;transition:background .2s,border-color .2s,color .2s}
+.nav-item:hover{background:#06202e;border-color:#12465c}
+.nav-item.active{background:linear-gradient(90deg,#0a3448,#06202e00);border-color:#1b6582;box-shadow:inset 3px 0 0 var(--ws-glow),0 0 18px #0ab8ef1f}
+/* Inputs and buttons share the pod edge */
+body:not(.workshop-page) input,body:not(.workshop-page) select,body:not(.workshop-page) textarea{border-color:#174e64}
+body:not(.workshop-page) input:focus-visible,body:not(.workshop-page) select:focus-visible,body:not(.workshop-page) textarea:focus-visible{border-color:var(--ws-glow);box-shadow:0 0 0 1px #35d6ff55,0 0 16px #35d6ff22}
+.secondary-button,.ws-menu{clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px));border-radius:2px}
+/* Page content materialises like the pods */
+body:not(.workshop-page) #content>*{animation:alert-in .35s cubic-bezier(.2,.8,.2,1) both}
+body.reduced-motion #content>*{animation:none}

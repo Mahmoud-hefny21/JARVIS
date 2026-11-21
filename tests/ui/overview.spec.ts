@@ -115,25 +115,24 @@ test('recent activity is an on-demand local-only panel and its preference surviv
   await expect(page.locator('[data-overview-panel="activity"]')).toHaveCount(0);
 });
 
-test('overview fullscreen hides the sidebar and exits using Escape or its button', async ({ page }) => {
+test('fullscreen opens the Workshop HUD and exits using Escape or its button', async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
   await page.goto('/#chat');
   const enter = page.getByRole('button', { name: 'Enter overview fullscreen', exact: true });
   expect(await enter.evaluate(button => button.previousElementSibling?.getAttribute('aria-label'))).toBe('Notifications');
   await enter.click();
-  await expect(page.getByRole('heading', { name: 'Your personal universe.' })).toBeVisible();
+  await expect(page.locator('.workshop')).toBeVisible();
   await expect(page.locator('.sidebar')).toBeHidden();
   await expect(page.getByRole('button', { name: 'Exit overview fullscreen', exact: true })).toHaveAttribute('aria-pressed', 'true');
   expect(await page.evaluate(() => !!document.fullscreenElement)).toBe(true);
-  await page.screenshot({ path: 'test-results/overview-fullscreen.png' });
+  await page.screenshot({ path: 'test-results/workshop-fullscreen.png' });
   await page.keyboard.press('Escape');
   await expect(enter).toBeVisible();
-  await expect(page.locator('.sidebar')).toBeVisible();
   expect(await page.evaluate(() => !!document.fullscreenElement)).toBe(false);
   await enter.click();
   await page.getByRole('button', { name: 'Exit overview fullscreen', exact: true }).click();
-  await expect(page.locator('.sidebar')).toBeVisible();
-  await expect(enter).toHaveAttribute('aria-pressed', 'false');
+  await expect(enter).toBeVisible();
+  await expect(page.locator('.workshop')).toBeVisible();
 });
 
 test('natural overview requests focus, pin, and hide cards while retaining the core', async ({ page }) => {

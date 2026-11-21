@@ -86,7 +86,7 @@ async function contextualAction(input:string,task?:UserTask):Promise<string|null
     if(plan.monitor){const monitors=await command<{key:string}[]>('monitor_list');const index=monitorIndex(plan.monitor,monitors.length);if(index===null)throw new Error('The requested monitor is unavailable.');key=monitors[index].key;}
     if(entity.id==='app:jarvis'){
       if(['minimize','restore'].includes(plan.operation))throw new Error('Use the existing JARVIS window controls for this action.');
-      await openOverviewFullscreen(()=>go('dashboard'),key??undefined);
+      await openOverviewFullscreen(()=>go('hud'),key??undefined);
       response='JARVIS Overview is fullscreen.';
     }else{
       const operation=key&&['show','focus'].includes(plan.operation)?'move':plan.operation==='show'?'focus':plan.operation;
@@ -245,19 +245,30 @@ function updateExperience() { document.body.classList.toggle('low-power',state.s
 // The chat reads newest-last, so it opens (and stays) scrolled to the latest message.
 function scrollChatToEnd(){const content=document.querySelector<HTMLElement>('#content');if(content)content.scrollTop=content.scrollHeight;const root=document.scrollingElement;if(root)root.scrollTop=root.scrollHeight;}
 // Workshop HUD: one cinematic screen, a voice-reactive core and four live pods. Everything else is by voice.
+function gaugeSvg(label:string,value:number|null,warn=85){const v=value==null?0:Math.max(0,Math.min(100,value));const c=2*Math.PI*22;
+  return `<div class="ws-gauge${value!=null&&value>=warn?' hot':''}" data-gauge="${label}"><svg viewBox="0 0 54 54"><circle class="track" cx="27" cy="27" r="22"/><circle class="fill" cx="27" cy="27" r="22" stroke-dasharray="${c.toFixed(1)}" style="stroke-dashoffset:${(c*(1-v/100)).toFixed(1)}"/></svg><b>${value==null?'—':Math.round(v)}<small>${value==null?'':'%'}</small></b><span>${label}</span></div>`;}
+// Six live pods around the core, all from real local data; refreshed in place every telemetry tick.
 function workshopPods(){const now=Date.now();
   const open=state.list('task').filter(t=>!t.done);
-  const upcoming=[...open,...state.list('event')].filter(r=>r.dueAt&&Date.parse(r.dueAt)>now-600000&&!r.done).sort((a,b)=>a.dueAt.localeCompare(b.dueAt))[0];
-  const until=upcoming?Math.round((Date.parse(upcoming.dueAt)-now)/60000):0;
-  const when=!upcoming?'':until<=0?'now':until<60?`in ${until} min`:until<1440?`at ${new Date(upcoming.dueAt).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}`:new Date(upcoming.dueAt).toLocaleDateString([],{weekday:'short',day:'numeric'});
-  const pct=(v:number|null|undefined)=>v==null?'—':Math.round(v)+'%';
+  const upcoming=[...open,...state.list('event')].filter(r=>r.dueAt&&Date.parse(r.dueAt)>now-600000&&!r.done).sort((a,b)=>a.dueAt.localeCompare(b.dueAt));
+  const first=upcoming[0],until=first?Math.round((Date.parse(first.dueAt)-now)/60000):0;
+  const when=!first?'':until<=0?'now':until<60?`in ${until} min`:until<1440?`at ${new Date(first.dueAt).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}`:new Date(first.dueAt).toLocaleDateString([],{weekday:'short',day:'numeric'});
+  const today=state.list('event').filter(e=>e.dueAt&&new Date(e.dueAt).toDateString()===new Date().toDateString()).length;
   const ram=telemetry&&telemetry.ramTotal>0?telemetry.ramUsed/telemetry.ramTotal*100:null;
+  const disk=telemetry?.diskUsed!=null&&telemetry.diskTotal?telemetry.diskUsed/telemetry.diskTotal*100:null;
+  const unread=state.list('notification').filter(n=>!n.done).length;
+  const running=tools.filter(t=>t.running).map(t=>t.name);
+  const shield=(v:boolean|null|undefined)=>v===true?'<em class="on">On</em>':v===false?'<em class="off">Off</em>':'<em>—</em>';
+  const activity=state.list('activity').filter(a=>!/^Voice:/.test(a.title)).slice(0,3);
+  const ago=(iso:string)=>{const m=Math.max(0,Math.round((now-Date.parse(iso))/60000));return m<1?'now':m<60?m+'m':Math.round(m/60)+'h';};
   const pod=(id:string,label:string,body:string,hot=false)=>`<section class="ws-pod ws-${id}${hot?' hot':''}" aria-label="${label}"><h2>${label}</h2>${body}</section>`;
   return `<div id="ws-pods" class="ws-pods">${
-    pod('next','Next',upcoming?`<strong>${esc(upcoming.title)}</strong><span>${when}</span>`:'<strong>Nothing scheduled</strong><span>The day is yours, sir.</span>',!!upcoming&&until<=10)}${
-    pod('system','System',`<div class="ws-meters"><span><b>${pct(telemetry?.cpu)}</b>CPU</span><span><b>${pct(ram)}</b>RAM</span><span><b>${telemetry?.battery==null?'AC':telemetry.battery+'%'}</b>${telemetry?.charging||telemetry?.battery==null?'Power':'Battery'}</span></div>`,(telemetry?.cpu??0)>90)}${
+    pod('next','Next',first?`<strong>${esc(first.title)}</strong><span>${when}${upcoming[1]?' · then '+esc(upcoming[1].title):''}</span><span class="ws-sub">${today?today+' event'+(today>1?'s':'')+' today':'No events today'}</span>`:'<strong>Nothing scheduled</strong><span>The day is yours, sir.</span>',!!first&&until<=10)}${
+    pod('system','System',`<div class="ws-gauges">${gaugeSvg('CPU',telemetry?.cpu??null,90)}${gaugeSvg('RAM',ram)}${gaugeSvg('DISK',disk,92)}</div><span class="ws-sub">${telemetry?.battery==null?'AC power':`Battery ${telemetry.battery}%${telemetry.charging?' · charging':''}`}${telemetry?.temperature!=null?' · '+Math.round(telemetry.temperature)+'°C':''}</span>`,(telemetry?.cpu??0)>90||(ram??0)>92)}${
+    pod('activity','Activity',activity.length?`<ul class="ws-log">${activity.map(a=>`<li><time>${ago(a.createdAt)}</time>${esc(a.title.slice(0,46))}</li>`).join('')}</ul>`:'<span>Nothing yet today.</span>')}${
+    pod('health','Health',`<ul class="ws-checks"><li>Defender ${shield(security?.realTime??security?.defender)}</li><li>Firewall ${shield(security?.firewall)}</li><li>Network <em class="${navigator.onLine?'on':'off'}">${navigator.onLine?'Online':'Offline'}</em></li></ul><span class="ws-sub">${running.length?'Running: '+esc(running.slice(0,3).join(', ')):'No dev tools running'}</span>`,security?.realTime===false||security?.firewall===false||!navigator.onLine)}${
     pod('tasks','Tasks',open.length?`<strong>${open.length} open</strong><ul>${open.slice(0,3).map(t=>`<li>${esc(t.title)}</li>`).join('')}</ul>`:'<strong>All clear</strong><span>Say “add task …”</span>')}${
-    pod('comms','Comms',`<strong>${weather?Math.round(weather.temperature)+'° · '+esc(weather.description):esc(state.settings.location||'Weather offline')}</strong><span>${emails.length?emails.length+' recent emails · '+esc(emails[0].subject.slice(0,48)):'No new mail synced'}</span>`)
+    pod('comms','Comms',`<strong>${weather?Math.round(weather.temperature)+'° · '+esc(weather.description):esc(state.settings.location||'Weather offline')}</strong><span>${emails.length?emails.length+' recent emails · '+esc(emails[0].subject.slice(0,44)):'No new mail synced'}</span><span class="ws-sub">${unread?unread+' notification'+(unread>1?'s':''):'No new notifications'}</span>`,unread>0)
   }</div>`;}
 function workshop(){return `<div class="workshop" aria-label="JARVIS workshop">
   <div class="ws-core" aria-hidden="true">${coreGraphic()}<canvas class="ws-fx" width="520" height="520"></canvas><i class="ws-radar"></i><i class="ws-ring r1"></i><i class="ws-ring r3"></i><div class="ws-heart"><span>J.A.R.V.I.S.</span></div></div>
@@ -277,7 +288,10 @@ function coreGraphic(){if(coreSvg)return coreSvg;const ticks=Array.from({length:
 // stopped when hidden or with reduced motion. Speaking has no output-level feed, so it pulses without inventing amplitudes.
 const micLevels:number[]=[];let fxFrame=0,fxLast=0;
 const particles=Array.from({length:28},(_,i)=>({a:i/28*Math.PI*2,r:.58+Math.random()*.4,s:(Math.random()*.4+.15)*(i%2?1:-1),z:Math.random()}));
-function coreFx(t:number){fxFrame=0;const c=document.querySelector<HTMLCanvasElement>('.ws-fx');if(!c||page!=='hud'||document.hidden||state.settings.reducedMotion)return;fxFrame=requestAnimationFrame(coreFx);const busy=['listening','speaking','processing','executing'].includes(document.body.dataset.ai??'');if(t-fxLast<(busy?33:85))return;const dt=Math.min(.1,(t-fxLast)/1000);fxLast=t;
+function coreFx(t:number){fxFrame=0;const c=document.querySelector<HTMLCanvasElement>('.ws-fx');if(!c||page!=='hud'||document.hidden||state.settings.reducedMotion)return;fxFrame=requestAnimationFrame(coreFx);
+  // Under heavy system load the decorative layer steps back so the PC stays responsive.
+  const heavy=(telemetry?.cpu??0)>85;document.body.classList.toggle('heavy-load',heavy);if(heavy){c.getContext('2d')!.clearRect(0,0,c.width,c.height);return;}
+  const busy=['listening','speaking','processing','executing'].includes(document.body.dataset.ai??'');if(t-fxLast<(busy?33:85))return;const dt=Math.min(.1,(t-fxLast)/1000);fxLast=t;
   const g=c.getContext('2d')!,W=c.width,C=W/2,ai=document.body.dataset.ai??'ready';g.clearRect(0,0,W,W);
   const hue=ai==='processing'?'255,199,106':ai==='error'?'255,170,80':'91,231,255',speed=ai==='processing'?3:ai==='executing'?2:ai==='offline'?.2:1;
   for(const p of particles){p.a+=p.s*dt*speed;const r=p.r*C*.92,x=C+Math.cos(p.a)*r,y=C+Math.sin(p.a)*r*.92;g.fillStyle=`rgba(${hue},${(.25+p.z*.55)*(ai==='offline'?.3:1)})`;g.beginPath();g.arc(x,y,.8+p.z*1.8,0,Math.PI*2);g.fill();}
@@ -288,10 +302,21 @@ function coreFx(t:number){fxFrame=0;const c=document.querySelector<HTMLCanvasEle
     else amp=C*.006*Math.sin(a*4+t/700);
     const r=base+amp,x=C+Math.cos(a)*r,y=C+Math.sin(a)*r;i?g.lineTo(x,y):g.moveTo(x,y);}
   g.stroke();if(ai!=='listening'&&micLevels.length)micLevels.length=0;}
+// Subtle 3D parallax: the core tilts a few degrees toward the pointer.
+let tiltPending=false;
+addEventListener('pointermove',e=>{if(page!=='hud'||state.settings.reducedMotion||tiltPending)return;tiltPending=true;requestAnimationFrame(()=>{tiltPending=false;const core=document.querySelector<HTMLElement>('.ws-core');if(!core)return;core.style.setProperty('--ry',((e.clientX/innerWidth-.5)*10).toFixed(2)+'deg');core.style.setProperty('--rx',(-(e.clientY/innerHeight-.5)*8).toFixed(2)+'deg');});});
 function startCoreFx(){if(!fxFrame&&page==='hud')fxFrame=requestAnimationFrame(coreFx);}
 addEventListener('online',()=>updateIndicators());addEventListener('offline',()=>updateIndicators());
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)startCoreFx();});
-function refreshWorkshop(){if(page!=='hud')return;const el=document.querySelector('#ws-pods');if(el)el.outerHTML=workshopPods();}
+function refreshWorkshop(){if(page!=='hud')return;const el=document.querySelector('#ws-pods');if(!el)return;
+  const next=document.createElement('template');next.innerHTML=workshopPods();const fresh=next.content.firstElementChild!;
+  for(const pod of [...fresh.children] as HTMLElement[]){const cls=[...pod.classList].find(c=>c.startsWith('ws-')&&c!=='ws-pod')!;const old=el.querySelector<HTMLElement>('.'+cls);if(!old){el.append(pod);continue;}
+    old.classList.toggle('hot',pod.classList.contains('hot'));
+    // Gauges: move the existing arcs so each change glides instead of jumping.
+    const gauges=pod.querySelectorAll<HTMLElement>('[data-gauge]');
+    if(gauges.length&&old.querySelectorAll('[data-gauge]').length===gauges.length){gauges.forEach(g=>{const o=old.querySelector<HTMLElement>(`[data-gauge="${g.dataset.gauge}"]`)!;o.className=g.className;o.querySelector('b')!.innerHTML=g.querySelector('b')!.innerHTML;(o.querySelector('.fill') as SVGElement).style.strokeDashoffset=(g.querySelector('.fill') as SVGElement).style.strokeDashoffset;});
+      const sub=pod.querySelector('.ws-sub'),osub=old.querySelector('.ws-sub');if(sub&&osub&&osub.innerHTML!==sub.innerHTML)osub.innerHTML=sub.innerHTML;}
+    else if(old.innerHTML!==pod.innerHTML)old.innerHTML=pod.innerHTML;}}
 // Film-style confirmations: short, varied, never the same robotic sentence twice in a row.
 let lastAck='';
 function ack(){const options=['Done, sir.','Right away, sir.','Done.','Consider it handled.','As you wish.'].filter(o=>o!==lastAck);lastAck=options[Math.floor(Math.random()*options.length)];return lastAck;}
@@ -372,7 +397,7 @@ async function runWorkspace(name:string,task?:UserTask) {
       if(item.application==='jarvis'){
         await state.preferences(SettingsSchema.parse({...state.settings,monitorKey:item.monitorKey}),task);
         go('dashboard');
-        await openOverviewFullscreen(()=>go('dashboard'),item.monitorKey);
+        await openOverviewFullscreen(()=>go('hud'),item.monitorKey);
       } else await command('app_window_control',{application:item.application,operation:'open',monitorKey:item.monitorKey},task);
       completed.push(`${item.application} on ${item.label}`);
     }
@@ -383,7 +408,9 @@ async function runWorkspace(name:string,task?:UserTask) {
 }
 async function answer(input:string,task?:UserTask,directVoiceRequest=false) {
   observeSelectedFile();
-  const intent=localIntent(input),visual=intent?.action==='pod'?null:await overviewCommand(input,task);if(pending&&!intent){const message='I am still working on your previous request. Please try again in a moment.';toast(message);if(directVoiceRequest)try{await speak(message);}catch(error){toast('Speech failed: '+String(error));}return;}const ownsBusy=!intent||intent.action==='research';if(ownsBusy)pending=true;aiState='Processing';updateIndicators();if(visual)go('dashboard');hudShow(input);
+  const intent=localIntent(input),visual=intent?.action==='pod'?null:await overviewCommand(input,task);
+  // Desktop actions show the core's Executing state while they actually run.
+  if(intent&&/^(app-window|chrome|vscode|installed|open|browser-|workspace|monitor|website)/.test(intent.action)){aiState='Executing';updateIndicators();}if(pending&&!intent){const message='I am still working on your previous request. Please try again in a moment.';toast(message);if(directVoiceRequest)try{await speak(message);}catch(error){toast('Speech failed: '+String(error));}return;}const ownsBusy=!intent||intent.action==='research';if(ownsBusy)pending=true;aiState='Processing';updateIndicators();if(visual)go('dashboard');hudShow(input);
   try {
     await state.add('message',{title:'You',body:input,role:'user'});let response=visual??'';
     let contextual:string|null=visual;
@@ -415,11 +442,11 @@ async function answer(input:string,task?:UserTask,directVoiceRequest=false) {
       const selected=monitors[index];
       await state.preferences(SettingsSchema.parse({...state.settings,monitorKey:selected.key}),task);
       go('dashboard');
-      await openOverviewFullscreen(()=>go('dashboard'),selected.key);
+      await openOverviewFullscreen(()=>go('hud'),selected.key);
       await state.activity('Moved JARVIS to '+selected.label);
       conversationContext.observe({id:'app:jarvis',kind:'application',label:'JARVIS'});response='Overview opened fullscreen on '+selected.label+'.';
     }
-    else if(intent?.action==='app-window'){aiState='Executing';updateIndicators();
+    else if(intent?.action==='app-window'){
       if(!native)throw new Error('Application window control is available in the Windows desktop app.');
       const [application,operation,target]=intent.text!.split('|');
       let monitorKey:string|null=null;
@@ -437,7 +464,7 @@ async function answer(input:string,task?:UserTask,directVoiceRequest=false) {
     }
     else if(intent?.action==='continuity'||intent?.action==='project-intelligence'||intent?.action==='suggestions')response=localInsight(state.records,intent.action);
     else if(intent?.action==='briefing')response=makeBriefing();
-    else if(intent?.action==='status')response=telemetry?`CPU ${telemetry.cpu==null?'awaiting a sample':Math.round(telemetry.cpu)+'%'}. RAM ${bytes(telemetry.ramUsed)} of ${bytes(telemetry.ramTotal)}. ${telemetry.battery==null?'Battery reading unavailable.':`Battery ${telemetry.battery}%.`}`:'System measurements require the native Windows app.';
+    else if(intent?.action==='status'){flashPod('system');response=telemetry?`CPU ${telemetry.cpu==null?'awaiting a sample':Math.round(telemetry.cpu)+'%'}. RAM ${bytes(telemetry.ramUsed)} of ${bytes(telemetry.ramTotal)}. ${telemetry.battery==null?'Battery reading unavailable.':`Battery ${telemetry.battery}%.`}`:'System measurements require the native Windows app.';}
     else if(intent?.action==='research'){if(!native)throw new Error('Cited live web research requires the Windows app and an eligible connected ChatGPT account.');aiRequestId=crypto.randomUUID();partialAnswer='';response=await command<string>('ai_research',{query:intent.text,requestId:aiRequestId});await state.activity('Web research completed',response.slice(0,2000));}
     else if(intent){await performAction(intent.action,task);response='The Windows action was accepted. Disruptive actions require your confirmation.';}
     else if(native||state.settings.aiMode!=='compatible'||state.settings.aiUrl){
@@ -618,7 +645,7 @@ document.addEventListener('click',e=>{const el=(e.target as HTMLElement).closest
   if(el.dataset.publishEvent){await command('google_event_save',{id:el.dataset.publishEvent});toast('Confirmed Google Calendar event saved.');return;}if(el.dataset.sendDraft){const r=state.records.find(r=>r.id===el.dataset.sendDraft)!;showInput('Review & send draft','Recipient email address','',async to=>{await command('gmail_send',{to,subject:r.title,body:r.body});await state.activity('Sent explicitly confirmed email');toast('Message sent.');});return;}
   switch(el.dataset.action){
     case 'menu':document.body.classList.toggle('nav-open');break;
-    case 'overview-fullscreen':await toggleOverviewFullscreen(()=>go('dashboard'));break;
+    case 'overview-fullscreen':await toggleOverviewFullscreen(()=>go(page==='dashboard'?'dashboard':'hud'));break;
     case 'overview-restore':await withUserTask(e,[{action:'settings_save',resource:'preferences'}],async task=>{overviewHidden=false;overviewFocus=null;overviewPinned=null;overviewExtras.clear();for(const id of overviewPanelIds)delete overviewSide[id];overviewOrder=[...overviewPanelIds];await persistOverviewLayout(task);overviewAnimateNextRender=true;render();});break;
     case 'overview-hide-activity':await withUserTask(e,[{action:'settings_save',resource:'preferences'}],async task=>{overviewExtras.delete('activity');if(overviewFocus==='activity')overviewFocus=null;if(overviewPinned==='activity')overviewPinned=null;await persistOverviewLayout(task);render();});break;
     case 'overview-hide-priority':await withUserTask(e,[{action:'settings_save',resource:'preferences'}],async task=>{overviewExtras.delete('priority');if(overviewFocus==='priority')overviewFocus=null;if(overviewPinned==='priority')overviewPinned=null;await persistOverviewLayout(task);render();});break;
@@ -684,7 +711,7 @@ async function init() {
     await listen<{type:string;session?:string;text?:string;reason?:string;level?:number;error?:string;confidence?:number;fallback?:boolean;language?:string;requestedLanguage?:string}>('voice',event=>{const value=event.payload;if(value.session!==activeVoiceId)return;if(value.type==='wake'){wakeRestarts=0;
       // Already recording the user: a second "JARVIS" must not cancel and restart the capture (that dropped requests).
       if(voiceMode==='ptt'){voiceLog('wake word ignored: already listening');return;}
-      voiceLog('wake word heard');speechRequest++;speechFallbackAttempted=false;activeVoiceId='';void run(async()=>{await command('speech_stop');voiceMode='';if(!desiredWake)return;if(page!=='hud')go('dashboard');if(await shouldUseLocalWhisper()){await listenOffline();}else{activeVoiceId=await command<string>('voice_start',{mode:'ptt',language:state.settings.language});voiceMode='ptt';aiState='Listening';render();}await openOverviewFullscreen(()=>go('dashboard'));});return;}if(value.type==='ready'){aiState=voiceMode==='wake'?'Wake word armed':'Listening';if(value.fallback&&value.language)toast('Using installed '+value.language+' speech recognizer because '+value.requestedLanguage+' is unavailable.');render();}if(value.type==='level'){document.documentElement.style.setProperty('--audio-level',String(Math.min(1,(value.level??0)/100)));return;}if(value.type==='transcript'&&value.text){const transcript=value.text;activeVoiceId='';toast('I heard: '+transcript.slice(0,120));voiceMode='';void run(()=>handleVoiceTranscript(transcript));}if(value.type==='unrecognized'&&voiceMode==='ptt'){activeVoiceId='';voiceMode='';aiState='Ready';render();void run(async()=>{if(!speechFallbackAttempted&&state.settings.sttEngine==='sapi'){speechFallbackAttempted=true;try{const status=await command<{installed:boolean}>('offline_speech_status');if(shouldRetryWithWhisper(state.settings.sttEngine,status.installed,false)){toast('Windows speech could not recognize that. Offline Whisper is listening now; please repeat your request.');await listenOffline();return;}}catch{}}toast(value.reason??"I didn?t catch that. Check the microphone, then try one short sentence again.");try{await speak('I did not catch that. Please try again.');}catch(error){toast('Speech failed: '+String(error));}});}if(value.type==='error'){const wasListening=voiceMode==='ptt';document.documentElement.style.setProperty('--audio-level','0');voiceMode='';voiceFailure=value.error??'Speech recognition unavailable.';aiState='Ready';toast('Microphone error: '+voiceFailure);render();if(wasListening)void run(async()=>{try{await speak('I could not start listening. Please check the selected speech language and microphone.');}catch(error){toast('Speech failed: '+String(error));}});}if(value.type==='stopped'){document.documentElement.style.setProperty('--audio-level','0');let recovery=voiceStopRecovery(desiredWake,voiceMode as 'wake'|'ptt'|'');if(recovery==='attention'&&!voiceFailure&&wakeRestarts<3){wakeRestarts++;recovery='rearm';}voiceMode='';if(recovery==='rearm'&&!voiceFailure){aiState='Rearming wake word';render();window.setTimeout(()=>{if(!desiredWake||voiceMode)return;void run(async()=>{try{await resumeWake();}catch(error){voiceFailure=String(error);voiceMode='';aiState='Ready';render();toast('Wake-word listener failed: '+voiceFailure);}});},300);}else if(recovery!=='idle'){voiceFailure=voiceFailure||'The wake-word listener stopped unexpectedly.';toast('Wake-word listener stopped: '+voiceFailure);aiState='Ready';render();}else{aiState='Ready';render();}}if(value.type==='listening'){aiState='Listening';render();}});
+      voiceLog('wake word heard');speechRequest++;speechFallbackAttempted=false;activeVoiceId='';void run(async()=>{await command('speech_stop');voiceMode='';if(!desiredWake)return;if(page!=='hud')go('dashboard');if(await shouldUseLocalWhisper()){await listenOffline();}else{activeVoiceId=await command<string>('voice_start',{mode:'ptt',language:state.settings.language});voiceMode='ptt';aiState='Listening';render();}await openOverviewFullscreen(()=>go('hud'));});return;}if(value.type==='ready'){aiState=voiceMode==='wake'?'Wake word armed':'Listening';if(value.fallback&&value.language)toast('Using installed '+value.language+' speech recognizer because '+value.requestedLanguage+' is unavailable.');render();}if(value.type==='level'){document.documentElement.style.setProperty('--audio-level',String(Math.min(1,(value.level??0)/100)));return;}if(value.type==='transcript'&&value.text){const transcript=value.text;activeVoiceId='';toast('I heard: '+transcript.slice(0,120));voiceMode='';void run(()=>handleVoiceTranscript(transcript));}if(value.type==='unrecognized'&&voiceMode==='ptt'){activeVoiceId='';voiceMode='';aiState='Ready';render();void run(async()=>{if(!speechFallbackAttempted&&state.settings.sttEngine==='sapi'){speechFallbackAttempted=true;try{const status=await command<{installed:boolean}>('offline_speech_status');if(shouldRetryWithWhisper(state.settings.sttEngine,status.installed,false)){toast('Windows speech could not recognize that. Offline Whisper is listening now; please repeat your request.');await listenOffline();return;}}catch{}}toast(value.reason??"I didn?t catch that. Check the microphone, then try one short sentence again.");try{await speak('I did not catch that. Please try again.');}catch(error){toast('Speech failed: '+String(error));}});}if(value.type==='error'){const wasListening=voiceMode==='ptt';document.documentElement.style.setProperty('--audio-level','0');voiceMode='';voiceFailure=value.error??'Speech recognition unavailable.';aiState='Ready';toast('Microphone error: '+voiceFailure);render();if(wasListening)void run(async()=>{try{await speak('I could not start listening. Please check the selected speech language and microphone.');}catch(error){toast('Speech failed: '+String(error));}});}if(value.type==='stopped'){document.documentElement.style.setProperty('--audio-level','0');let recovery=voiceStopRecovery(desiredWake,voiceMode as 'wake'|'ptt'|'');if(recovery==='attention'&&!voiceFailure&&wakeRestarts<3){wakeRestarts++;recovery='rearm';}voiceMode='';if(recovery==='rearm'&&!voiceFailure){aiState='Rearming wake word';render();window.setTimeout(()=>{if(!desiredWake||voiceMode)return;void run(async()=>{try{await resumeWake();}catch(error){voiceFailure=String(error);voiceMode='';aiState='Ready';render();toast('Wake-word listener failed: '+voiceFailure);}});},300);}else if(recovery!=='idle'){voiceFailure=voiceFailure||'The wake-word listener stopped unexpectedly.';toast('Wake-word listener stopped: '+voiceFailure);aiState='Ready';render();}else{aiState='Ready';render();}}if(value.type==='listening'){aiState='Listening';render();}});
     void refreshTelemetry();void run(refreshSecurity);void run(async()=>{tools=await command('tools_status');render();});
     void run(async()=>{const cache=await command<{weather:typeof weather;emails:typeof emails;emailsAt?:string;calendarAt?:string;connected:boolean}>('cached_integrations');weather=WeatherSchema.safeParse(cache.weather).data??null;emails=cache.emails??[];emailsAt=cache.emailsAt??'';calendarAt=cache.calendarAt??'';googleConnected=cache.connected;if(googleConnected)void googleCalendar().catch(()=>undefined);render();});
     if(state.settings.weatherEnabled)void run(refreshWeather);
