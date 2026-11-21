@@ -64,10 +64,13 @@ do {
       }
     }
     if ([JarvisAppWindow]::GetForegroundWindow() -ne $handle) { [void][JarvisAppWindow]::SetForegroundWindow($handle) }
-    $valid = $valid -and [JarvisAppWindow]::GetForegroundWindow() -eq $handle
+    # Windows forbids a background app from stealing focus, so only an explicit focus request must end in front.
+    if ($operation -ne 'move') { $valid = $valid -and [JarvisAppWindow]::GetForegroundWindow() -eq $handle }
   }
   if ($valid) { $stable++ } else { $stable = 0 }
   if ($stable -ge 3) { break }
   Start-Sleep -Milliseconds 150
 } while ([DateTime]::UtcNow -lt $deadline)
 if ($stable -lt 3) { throw "Windows did not verify stable $operation (Win32 error $lastError); no success reported" }
+# Fill the target display like a person dragging the window there would.
+if ($operation -eq 'move') { [void][JarvisAppWindow]::ShowWindow($handle,3) }

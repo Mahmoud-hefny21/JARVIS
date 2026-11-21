@@ -37,6 +37,8 @@ async function contextualAction(input:string,task?:UserTask):Promise<string|null
     conversationContext.observe({id:'file:'+projectInfo.id+':'+destination,kind:'file',label:destination,projectId:projectInfo.id,path:destination});
     return 'Copied '+source+' to '+destination+'. Verified '+result.bytes+' bytes; no existing file was overwritten.';
   }
+  // Instant commands and task requests never go through item resolution.
+  if(localIntent(input)||/\b(task|remind|reminder|todo)\b|تاسك|مهمة|فكرني/i.test(input))return null;
   let entities=contextEntities(input);
   if(native){const authorized=await command<Entry[]>('context_records');const allowed=new Set(authorized.filter(r=>r.kind==='project').map(r=>r.id));entities=[...recordEntities(authorized),...entities.filter(e=>(e.kind==='file'&&e.projectId&&allowed.has(e.projectId))||e.id.startsWith('app:installed:'))];}
   let resolution=conversationContext.resolve(input,entities);
@@ -53,7 +55,8 @@ async function contextualAction(input:string,task?:UserTask):Promise<string|null
     try{const proposal=JSON.parse(response);resolution=proposal===null?{question:'Which authorized item did you mean?'}:conversationContext.validate(ProposalSchema.parse(proposal),entities);}catch{resolution={question:'Which authorized item and action did you mean?'};}
   }
   if(!resolution)return null;
-  if('question' in resolution)return resolution.question;
+  // Only ask when there is a real choice between items; otherwise let the AI understand the request.
+  if('question' in resolution)return resolution.question.startsWith('Which one:')?resolution.question:null;
   const {plan,entity}=resolution;
   let response:string;
   if(entity.kind==='file'){
@@ -155,11 +158,17 @@ function repairSpoken(text:string){return text.replace(/^\s*(?:hey |ok |okay )?(
 function spokenSummary(text:string,limit:number){const clean=text.replace(/[*#`>_~|-]{2,}|[*#`>]/g,' ').replace(/\s+/g,' ').trim();if(clean.length<=limit)return clean;const cut=clean.slice(0,limit);const end=Math.max(cut.lastIndexOf('. '),cut.lastIndexOf('? '),cut.lastIndexOf('! '),cut.lastIndexOf('؟ '));return (end>40?cut.slice(0,end+1):cut)+' The rest is on screen.';}
 // Timestamped voice stages in the activity log, for diagnosing latency.
 function voiceLog(stage:string){void state.activity('Voice: '+stage,new Date().toISOString());}
-async function runUserText(input:string,event:Pick<Event,'isTrusted'>,directVoiceRequest=false){
+// Commands the AI may run on the user's behalf after understanding free speech (all reversible or allowlisted).
+const AUTO_ACTIONS=new Set(['task','task-delete','task-done','remember','recall','app-window','monitor','chrome','vscode','briefing','status','preference']);
+let pendingAction='';
+async function runUserText(input:string,event:Pick<Event,'isTrusted'>,directVoiceRequest=false,translated=false){
   if(directVoiceRequest)input=repairSpoken(input);
   const normalized=normalizeUtterance(input);
   if(native&&installedApps===null&&(/\b(open|launch|start)\b|^افتح/.test(normalized)))await loadInstalledApps(false);
-  return withUserTask(event,directScopes(input,conversationContext.snapshot(),projectInfo?.id,state.settings.workspacePresets,installedApps??[]),task=>answer(input,task,directVoiceRequest));
+  const result=await withUserTask(event,directScopes(input,conversationContext.snapshot(),projectInfo?.id,state.settings.workspacePresets,installedApps??[]),task=>answer(input,task,directVoiceRequest));
+  const next=pendingAction;pendingAction='';
+  if(next&&!translated)return runUserText(next,event,directVoiceRequest,true);
+  return result;
 }
 async function handleVoiceTranscript(transcript:string){
   try{await runUserText(transcript,{isTrusted:true},true);await converse();}
@@ -368,7 +377,10 @@ async function answer(input:string,task?:UserTask,directVoiceRequest=false) {
     else if(intent){await performAction(intent.action,task);response='The Windows action was accepted. Disruptive actions require your confirmation.';}
     else if(native||state.settings.aiMode!=='compatible'||state.settings.aiUrl){
       // Learns what the user likes: personal preferences are saved to memory automatically and fed back into every answer.
-      if(/^(?:jarvis[, ]+)?(?:i (?:really )?(?:like|love|prefer|hate|enjoy|don'?t like|usually|always|never)\b|my favou?rite\b|call me\b|i'?m allergic\b|(?:انا )?(?:بحب|بكره|مبحبش|بفضل)\b)/iu.test(input.trim())&&!state.list('memory').some(m=>m.body===input.trim()))void state.add('memory',{title:'Preference: '+input.trim().slice(0,200),body:input.trim().slice(0,1000)},task);const context=state.list('message').reverse().slice(directVoiceRequest?-4:['claude','hybrid'].includes(state.settings.aiMode)?-20:-8).map(m=>({role:m.role,content:m.body}));if(directVoiceRequest&&context.length)context[context.length-1]={...context[context.length-1],content:context[context.length-1].content+'\n\n(Spoken request: answer in one to three short sentences.)'};const terms=input.toLowerCase().split(/\s+/).filter(t=>t.length>3);const memories=(native?await command<Entry[]>('memory_search',{query:input.slice(0,150)}):state.list('memory').filter(m=>terms.some(t=>`${m.title} ${m.body}`.toLowerCase().includes(t)))).slice(0,4).map(m=>m.title+' '+m.body.slice(0,1000));memories.unshift(liveFacts());aiRequestId=crypto.randomUUID();partialAnswer='';streamSpeak=native&&shouldSpeakResponse(state.settings,directVoiceRequest);earlySpoken='';earlySpeech=null;const seeScreen=native&&/(screen|on my (pc|computer|display)|what am i (looking at|seeing)|read this)|شاش/i.test(input);response=await command<string>('ai_chat',{messages:context,memories,requestId:aiRequestId,seeScreen});}
+      if(/^(?:jarvis[, ]+)?(?:i (?:really )?(?:like|love|prefer|hate|enjoy|don'?t like|usually|always|never)\b|my favou?rite\b|call me\b|i'?m allergic\b|(?:انا )?(?:بحب|بكره|مبحبش|بفضل)\b)/iu.test(input.trim())&&!state.list('memory').some(m=>m.body===input.trim()))void state.add('memory',{title:'Preference: '+input.trim().slice(0,200),body:input.trim().slice(0,1000)},task);const context=state.list('message').reverse().slice(directVoiceRequest?-4:['claude','hybrid'].includes(state.settings.aiMode)?-20:-8).map(m=>({role:m.role,content:m.body}));if(directVoiceRequest&&context.length)context[context.length-1]={...context[context.length-1],content:context[context.length-1].content+'\n\n(Spoken request: answer in one to three short sentences.)'};const terms=input.toLowerCase().split(/\s+/).filter(t=>t.length>3);const memories=(native?await command<Entry[]>('memory_search',{query:input.slice(0,150)}):state.list('memory').filter(m=>terms.some(t=>`${m.title} ${m.body}`.toLowerCase().includes(t)))).slice(0,4).map(m=>m.title+' '+m.body.slice(0,1000));memories.unshift(liveFacts());aiRequestId=crypto.randomUUID();partialAnswer='';streamSpeak=native&&shouldSpeakResponse(state.settings,directVoiceRequest);earlySpoken='';earlySpeech=null;const seeScreen=native&&/b(screen|on my (pc|computer|display)|what am i (looking at|seeing)|read this)b|شاش/i.test(input);response=await command<string>('ai_chat',{messages:context,memories,requestId:aiRequestId,seeScreen});
+      const act=response.trim().match(/^(?:ACTION|Say)\s*:\s*["“']?(.+?)["”']?[.!]?\s*$/i);const understood=act?localIntent(act[1]):null;
+      // The AI understood an action in the user's own words: run it instead of asking them to repeat it.
+      if(act&&understood&&AUTO_ACTIONS.has(understood.action)){pendingAction=act[1];return;}}
     else response='I’m available for local commands, tasks, memories, and briefings. Advanced conversation needs an optional AI provider in Settings. No model is running in the background.';
     await state.add('message',{title:'JARVIS',body:response.slice(0,32000),role:'assistant'});hudAnswer(response);if(shouldSpeakResponse(state.settings,directVoiceRequest)){try{const early=earlySpeech;streamSpeak=false;earlySpeech=null;if(early)await early;const rest=early&&response.startsWith(earlySpoken)?response.slice(earlySpoken.length).trim():response;earlySpoken='';const spoken=spokenSummary(rest,early?220:320);if(spoken)await speak(spoken);}catch(error){toast('Speech failed: '+String(error));}}
   } catch(error) {
@@ -456,7 +468,7 @@ async function converse(){
       catch(error){if(/no audible speech|catch that/i.test(String(error))&&request===speechRequest)continue;if(!/cancelled/i.test(String(error)))void state.activity('Voice follow-up stopped',String(error).slice(0,300));break;}
       finally{voiceMode='';}
       if(text)lastHeard=Date.now();
-      if(request!==speechRequest||!text||/^(stop|thanks|thank you|that'?s all|goodbye|never ?mind|شكرا|خلاص)\b/i.test(text))break;
+      if(request!==speechRequest||!text||/^(stop|thanks|thank you|that'?s all|goodbye|never ?mind|mute|be quiet|quiet|shut up|silence|enough|شكرا|خلاص|اسكت|بس)\b/i.test(text.replace(/^jarvis[,. ]*/i,''))){await command('speech_stop').catch(()=>{});break;}
       try{await runUserText(text,{isTrusted:true},true);}catch(error){void state.activity('Voice request failed',String(error).slice(0,300));break;}
     }
   }finally{conversing=false;aiState='Ready';render();}
@@ -566,7 +578,7 @@ async function init() {
   const savedLayout=state.settings.overviewLayout;overviewHidden=savedLayout.hidden;overviewPinned=savedLayout.pinned;overviewOrder=savedLayout.order.length?[...savedLayout.order,...overviewPanelIds.filter(id=>!savedLayout.order.includes(id))]:[...overviewPanelIds];for(const [id,side] of Object.entries(savedLayout.sides))overviewSide[id as OverviewPanelId]=side;for(const id of savedLayout.extras)overviewExtras.add(id);
   page=pages.some(p=>p[0]===location.hash.slice(1))?location.hash.slice(1):'dashboard';render();updateClock();
   if(native){
-    await listen<{requestId:string;text:string}>('ai-delta',event=>{if(event.payload.requestId!==aiRequestId)return;partialAnswer+=event.payload.text;if(streamSpeak&&!earlySpeech){const first=partialAnswer.match(/^[\s\S]{12,}?[.!?؟\n](?=\s)/);if(first){earlySpoken=first[0];earlySpeech=speak(earlySpoken).catch(()=>undefined);}}hudAnswer(partialAnswer,true);let target=document.querySelector('#ai-stream');if(!target&&page==='chat'){render();target=document.querySelector('#ai-stream');}if(target&&(!streamSpeak||earlySpeech)){target.textContent=partialAnswer;scrollChatToEnd();}});
+    await listen<{requestId:string;text:string}>('ai-delta',event=>{if(event.payload.requestId!==aiRequestId)return;partialAnswer+=event.payload.text;if(streamSpeak&&!earlySpeech&&!/^\s*(?:ACTION|Say)\b/i.test(partialAnswer)){const first=partialAnswer.match(/^[\s\S]{12,}?[.!?؟\n](?=\s)/);if(first){earlySpoken=first[0];earlySpeech=speak(earlySpoken).catch(()=>undefined);}}hudAnswer(partialAnswer,true);let target=document.querySelector('#ai-stream');if(!target&&page==='chat'){render();target=document.querySelector('#ai-stream');}if(target&&(!streamSpeak||earlySpeech)){target.textContent=partialAnswer;scrollChatToEnd();}});
     await listen<boolean>('window-hidden',event=>{nativeHidden=event.payload;document.body.classList.toggle('paused',document.hidden||nativeHidden);if(!nativeHidden&&!document.hidden){render();updateClock();void refreshTelemetry();}});
     await listen<'pause'|'settings'>('tray-action',event=>{if(event.payload==='pause')void run(()=>stopVoice(false));else go('settings');});
     await listen<{level?:number;phase?:string}>('mic',event=>{const v=event.payload;if(typeof v.level==='number')document.documentElement.style.setProperty('--audio-level',String(v.level));if(v.phase){aiState=v.phase==='listening'?'Listening':v.phase==='speech'?'Hearing you':'Understanding';updateIndicators();}});

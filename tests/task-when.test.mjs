@@ -43,6 +43,6 @@ test('delete and complete tasks by voice', () => {
 });
 test('natural window placement across monitors', () => {
   const cases = { 'Switch Chrome in monitor two.': 'chrome|move|two', 'Chrome to monitor one': 'chrome|move|one', 'put this tab on screen 1': 'chrome|move|1',
-    'Jarvis, move VS Code to the left monitor': 'vscode|move|left', 'send the browser to display three': 'chrome|move|three', 'open chrome on monitor two': 'chrome|open|two' };
+    'Jarvis, move VS Code to the left monitor': 'vscode|move|left', 'send the browser to display three': 'chrome|move|three', 'open chrome on monitor two': 'chrome|open|two', 'Throw Chrome on the second screen.': 'chrome|move|two', 'move this tab to the main screen': 'chrome|move|one' };
   for (const [said, want] of Object.entries(cases)) if (want) assert.equal(localIntent(said)?.text, want, said);
 });

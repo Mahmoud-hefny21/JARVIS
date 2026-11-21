@@ -114,6 +114,11 @@ export function localIntent(input: string): { action: string; text?: string } | 
   // Flexible spoken placement: "switch Chrome in monitor two", "put this tab on screen 1", "send the browser to display left".
   const placed = t.match(/^(?:(move|switch|put|send|throw|take|open|show)\s+)?(?:the\s+|my\s+)?(google chrome|chrome|vs code|vscode|visual studio code|code|this tab|this window|the browser|browser|this|it)\s+(?:back\s+)?(?:to|in|into|on|onto)\s+(?:the\s+)?(?:monitor|display|screen)\s+(one|two|three|won|to|too|1|2|3|left|center|right)$/)
     || t.match(/^(move|switch|put|send|open)\s+(?:the\s+|my\s+)?(google chrome|chrome|vs code|vscode|code|this tab|the browser|browser)\s+(?:to\s+)?(?:the\s+)?(one|two|three|1|2|3|left|center|right)\s+(?:monitor|display|screen)$/);
+  const ordinal = t.match(/^(?:(move|switch|put|send|throw|take|open|show)\s+)?(?:the\s+|my\s+)?(google chrome|chrome|vs code|vscode|visual studio code|code|this tab|this window|the browser|browser|this|it)\s+(?:back\s+)?(?:to|in|into|on|onto)\s+(?:the\s+|my\s+)?(first|main|primary|second|other|third)\s+(?:monitor|display|screen)$/);
+  if (ordinal) {
+    const where = ({ first: 'one', main: 'one', primary: 'one', second: 'two', other: 'two', third: 'three' } as Record<string, string>)[ordinal[3]];
+    return { action: 'app-window', text: `${/code/.test(ordinal[2]) ? 'vscode' : 'chrome'}|${ordinal[1] === 'open' ? 'open' : 'move'}|${where}` };
+  }
   if (placed) {
     const app = /code/.test(placed[2]) ? 'vscode' : 'chrome';
     const where = ({ won: 'one', to: 'two', too: 'two' } as Record<string, string>)[placed[3]] ?? placed[3];
