@@ -31,7 +31,7 @@ public class JarvisVoice {
     if(info == null) throw new Exception("No offline Windows recognizer is installed for " + language + ". Installed recognizers: " + (installed.Length == 0 ? "none" : String.Join(", ", installed.Select(candidate => candidate.Culture.Name))) + ". Install a Windows speech recognition language pack, then restart JARVIS.");
     using(var engine = new SpeechRecognitionEngine(info)) {
       bool wake = mode == "wake" || mode == "wake-whisper" || mode == "wake-interrupt";
-      var builder = new GrammarBuilder(); builder.Culture=info.Culture; builder.Append(new Choices("JARVIS", "hey JARVIS", "OK JARVIS"));
+      var builder = new GrammarBuilder(); builder.Culture=info.Culture; builder.Append(new Choices("JARVIS", "hey JARVIS", "OK JARVIS", "wake up JARVIS", "JARVIS wake up", "good morning JARVIS", "JARVIS are you there"));
       var keyword = new Grammar(builder); keyword.Enabled=wake;
       var dictation = new DictationGrammar(); dictation.Enabled=!wake;
       engine.LoadGrammar(keyword); engine.LoadGrammar(dictation);
@@ -47,7 +47,7 @@ public class JarvisVoice {
       engine.SpeechHypothesized += (s,e) => {
         if(caption) { Emit(new {type="partial",text=e.Result.Text}); return; }
         // React while the keyword is still being heard instead of waiting for trailing silence.
-        if(wake && !woke && e.Result.Grammar==keyword && e.Result.Confidence >= 0.45) { woke = true; Emit(new {type="wake"}); ended.Set(); }
+        if(wake && !woke && e.Result.Grammar==keyword && e.Result.Confidence >= 0.45) { woke = true; Emit(new {type="wake",text=e.Result.Text,confidence=e.Result.Confidence}); ended.Set(); }
       };
       engine.SpeechRecognitionRejected += (s,e) => {
         if(caption) return;
@@ -65,7 +65,7 @@ public class JarvisVoice {
         if(wake && e.Result.Grammar==keyword) {
           // A single short keyword attracts false matches from noise and JARVIS's own voice; require a confident hit.
           if(e.Result.Confidence < 0.5 || woke) return;
-          woke = true; Emit(new {type="wake"});
+          woke = true; Emit(new {type="wake",text=e.Result.Text,confidence=e.Result.Confidence});
           ended.Set(); return;
         } else {
           Emit(new {type="transcript",text=e.Result.Text});

@@ -253,3 +253,22 @@ body:not(.workshop-page) input:focus-visible,body:not(.workshop-page) select:foc
 /* Page content materialises like the pods */
 body:not(.workshop-page) #content>*{animation:alert-in .35s cubic-bezier(.2,.8,.2,1) both}
 body.reduced-motion #content>*{animation:none}
+
+/* Workshop tidy-up: fewer small labels around the command bar, wider breathing room */
+body.workshop-page #privacy-status,body.workshop-page .command-hint{display:none}
+body.workshop-page .command-meta{justify-content:center;opacity:.7}
+body.workshop-page .ws-menu{opacity:.75}
+body.workshop-page .ws-menu:hover{opacity:1}
+body.workshop-page .topbar{border-bottom-color:transparent}
+
+/* Sound & wake-up settings */
+.sound-panel{grid-column:1/-1;margin-top:16px;padding:18px 22px}
+.sound-row{display:grid;grid-template-columns:1fr 200px auto;gap:16px;align-items:center;padding:12px 0;border-top:1px solid #0f3a4d}
+.sound-row strong{display:block;color:#e8fbff}
+.sound-row small{display:block;color:#7fa9bd}
+.sound-file{display:block;font-size:12px;color:#57c9e8;margin-top:3px}
+.sound-volume{display:flex;flex-direction:column;gap:4px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#5fb6d1}
+.sound-volume input{accent-color:#35d6ff}
+.sound-pick{cursor:pointer}
+@media (max-width:760px){.sound-row{grid-template-columns:1fr}}
+.sound-panel .check-row{display:flex;align-items:center;gap:10px;margin-top:14px;color:#cfe3ee}.sound-panel .check-row input{width:auto;margin:0}

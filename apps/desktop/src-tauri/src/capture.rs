@@ -141,11 +141,12 @@ impl Detector {
         }
         let mut start = (self.floor * 3.0).max(MIN_SPEECH_RMS);
         // While JARVIS talks, only a voice clearly louder than its own echo, held for 250 ms, is the user.
-        let needed = if echo_active || self.echo > 0.0 { start = start.max(self.echo * 2.5); 5 } else { 3 };
+        // Live test: 2.5x let JARVIS's own voice through laptop speakers interrupt itself; 4x for 400 ms does not.
+        let needed = if echo_active || self.echo > 0.0 { start = start.max(self.echo * 4.0); 8 } else { 3 };
         if echo_active && self.onset.is_none() {
             self.echo_chunks += 1;
             // Learn how loud JARVIS's own voice is in the microphone before listening for the user.
-            if self.echo_chunks <= 6 {
+            if self.echo_chunks <= 10 {
                 self.echo = self.echo.max(level);
                 return Step::Continue;
             }
@@ -362,9 +363,12 @@ mod tests {
         for _ in 0..4 { feed(&mut d, 150.0, false); }
         // JARVIS talking: its echo swings between 600 and 2400 for two seconds.
         for i in 0..40 { assert!(matches!(feed(&mut d, if i % 3 == 0 { 2400.0 } else { 600.0 }, true), Step::Continue), "echo must not trigger"); }
+        // A short louder burst of JARVIS's own voice (a stressed syllable) must not count either.
+        for _ in 0..5 { assert!(matches!(feed(&mut d, 7000.0, true), Step::Continue)); }
+        for _ in 0..4 { feed(&mut d, 900.0, true); }
         assert!(d.onset.is_none());
         // The user speaks over it, much louder and sustained.
-        let started = (0..6).any(|_| matches!(feed(&mut d, 9000.0, true), Step::SpeechStarted));
+        let started = (0..10).any(|_| matches!(feed(&mut d, 30000.0, true), Step::SpeechStarted));
         assert!(started && d.barged);
     }
 
