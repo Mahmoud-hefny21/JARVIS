@@ -101,8 +101,8 @@ body.workshop-page #content{padding:0;overflow:hidden}
 /* Core states follow the conversation */
 body[data-ai="listening"] .ws-ring.r1{animation-duration:3s}
 body[data-ai="listening"] .ws-heart{box-shadow:0 0 70px #2fd0ffbb,0 0 160px #18a8d877}
-body[data-ai="thinking"] .ws-ring.r1,body[data-ai="thinking"] .ws-ring.r3{animation-duration:1.2s;border-top-color:#ffc76a;border-left-color:#ffc76a;border-right-color:#ffc76a}
-body[data-ai="thinking"] .ws-state{color:#ffc76a}
+body[data-ai="processing"] .ws-ring.r1,body[data-ai="processing"] .ws-ring.r3{animation-duration:1.2s;border-top-color:#ffc76a;border-left-color:#ffc76a;border-right-color:#ffc76a}
+body[data-ai="processing"] .ws-state{color:#ffc76a}
 body[data-ai="speaking"] .ws-heart{animation:ws-speak .5s ease-in-out infinite alternate}
 @keyframes ws-speak{to{transform:scale(1.12);box-shadow:0 0 80px #5be7ffcc,0 0 180px #18a8d888}}
 /* Pods float around the core */
@@ -147,9 +147,9 @@ body.reduced-motion .ws-ring,body.reduced-motion .ws-heart,body.reduced-motion .
 .ws-radar{position:absolute;inset:14%;border-radius:50%;background:conic-gradient(from 0deg,#35d6ff00 0deg,#35d6ff00 300deg,#35d6ff38 352deg,#9ff4ff88 360deg);animation:orbit 4.5s linear infinite;opacity:.55;mix-blend-mode:screen}
 .ws-ring.r1{inset:4%}
 /* Thinking / listening recolour the dial too */
-body[data-ai="thinking"] .ws-seg.s1,body[data-ai="thinking"] .ws-ticks line.long{stroke:#ffc76a}
-body[data-ai="thinking"] .ws-seg.s1{animation-duration:3s}
-body[data-ai="thinking"] .ws-radar{background:conic-gradient(from 0deg,#ffc76a00 300deg,#ffc76a40 352deg,#ffe2a888 360deg);animation-duration:1.4s}
+body[data-ai="processing"] .ws-seg.s1,body[data-ai="processing"] .ws-ticks line.long{stroke:#ffc76a}
+body[data-ai="processing"] .ws-seg.s1{animation-duration:3s}
+body[data-ai="processing"] .ws-radar{background:conic-gradient(from 0deg,#ffc76a00 300deg,#ffc76a40 352deg,#ffe2a888 360deg);animation-duration:1.4s}
 body[data-ai="listening"] .ws-radar{animation-duration:2s;opacity:.8}
 /* Pods: corner brackets and a hologram scan line */
 .ws-pod{position:relative}
@@ -179,3 +179,13 @@ body.low-power .ws-radar,body.low-power .ws-legend{display:none}
 /* "Show me…": the asked-for hologram steps forward */
 .ws-pod.focus{border-color:#7ff0ff;box-shadow:inset 0 0 0 1px #1f7f9e,0 0 60px #35d6ff66;transform:scale(1.06);transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s;animation:ws-focus 1.2s ease-in-out 2}
 @keyframes ws-focus{50%{box-shadow:inset 0 0 0 1px #1f7f9e,0 0 90px #5be7ffaa}}
+
+/* Core states beyond idle/listening/processing/speaking */
+.ws-fx{position:absolute;inset:-12%;width:124%;height:124%;pointer-events:none}
+body[data-ai="executing"] .ws-seg.s1{animation-duration:4s;stroke:#7ff0c8}
+body[data-ai="executing"] .ws-ticks line.long{stroke:#7ff0c8}
+body[data-ai="executing"] .ws-state{color:#7ff0c8}
+body[data-ai="error"] .ws-heart{background:radial-gradient(circle,#fff1d6 0,#ffc76a 20%,#7a4a0e 50%,#201203 72%);box-shadow:0 0 40px #ffb54766}
+body[data-ai="error"] .ws-state{color:#ffc76a}
+body[data-ai="offline"] .ws-core{filter:saturate(.3) brightness(.6)}
+body[data-ai="offline"] .ws-state::after{content:" · OFFLINE"}

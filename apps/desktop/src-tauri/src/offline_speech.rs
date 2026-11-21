@@ -294,6 +294,9 @@ fn clean_transcript(text: &str) -> Result<String> {
     }
     Ok(text.chars().take(4000).collect())
 }
+/// True while JARVIS's own voice is playing (set by the speak command).
+pub static SPEAKING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+fn speaking() -> bool { SPEAKING.load(Ordering::SeqCst) }
 static LAST_HEARD: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 fn now_ms() -> u64 { std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0) }
 /// True for 20 s after the microphone captured a real (non-empty) request from the user.
@@ -313,6 +316,7 @@ pub fn microphone(app: &tauri::AppHandle, follow_up: bool) -> Result<String> {
             app,
             crate::capture::Settings {
                 wait_for_speech: Duration::from_secs(if follow_up { 6 } else { 8 }),
+                echo_active: speaking,
             },
             || state.offline_epoch.load(Ordering::SeqCst) != epoch,
             &wav,

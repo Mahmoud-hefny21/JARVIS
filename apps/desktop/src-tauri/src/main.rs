@@ -737,6 +737,11 @@ async fn speak(
         let state = app.state::<NativeState>();
         let speech = &state.speech;
         let before = speech.synth_epoch.load(std::sync::atomic::Ordering::SeqCst);
+        // Lets a capture running during playback tell the user's voice from JARVIS's own echo.
+        struct Talking;
+        impl Drop for Talking { fn drop(&mut self) { offline_speech::SPEAKING.store(false, std::sync::atomic::Ordering::SeqCst); } }
+        offline_speech::SPEAKING.store(true, std::sync::atomic::Ordering::SeqCst);
+        let _talking = Talking;
         let piper = engine == "piper" && !PIPER_TOO_SLOW.load(std::sync::atomic::Ordering::Relaxed);
         let result = if piper {
             match windows::speak_piper(speech, &text, &executable, &model, &config) {

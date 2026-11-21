@@ -30,8 +30,10 @@ const PREROLL_MS: usize = 300;
 const MAX_UTTERANCE: Duration = Duration::from_secs(15);
 
 pub struct Settings {
-    /// How long to wait for speech to begin before giving up.
+    /// How long to wait for speech to begin before giving up (counted from when JARVIS stops talking).
     pub wait_for_speech: Duration,
+    /// True while JARVIS itself is talking: the microphone then also hears its voice (echo).
+    pub echo_active: fn() -> bool,
 }
 
 struct Device {
@@ -111,6 +113,11 @@ struct Detector {
     silent_run: usize,
     onset: Option<usize>,
     voiced_chunks: usize,
+    /// Loudness envelope of JARVIS's own voice coming back through the microphone.
+    echo: f32,
+    echo_chunks: usize,
+    /// Speech began while JARVIS was talking: the user is interrupting.
+    pub barged: bool,
 }
 enum Step {
     Continue,
@@ -119,24 +126,38 @@ enum Step {
 }
 impl Detector {
     fn new() -> Self {
-        Self { floor: f32::MAX, calibrating: 4, voiced_run: 0, silent_run: 0, onset: None, voiced_chunks: 0 }
+        Self { floor: f32::MAX, calibrating: 4, voiced_run: 0, silent_run: 0, onset: None, voiced_chunks: 0, echo: 0.0, echo_chunks: 0, barged: false }
     }
     /// `position` is the sample count recorded after this chunk.
-    fn push(&mut self, level: f32, position: usize) -> Step {
+    fn push(&mut self, level: f32, position: usize, echo_active: bool) -> Step {
+        if !echo_active {
+            self.echo *= 0.8;
+        }
         if self.calibrating > 0 {
             // The quietest of the first 200 ms is the room's noise floor (speech may already have begun).
             self.calibrating -= 1;
             self.floor = self.floor.min(level).min(900.0);
             return Step::Continue;
         }
-        let start = (self.floor * 3.0).max(MIN_SPEECH_RMS);
+        let mut start = (self.floor * 3.0).max(MIN_SPEECH_RMS);
+        // While JARVIS talks, only a voice clearly louder than its own echo, held for 250 ms, is the user.
+        let needed = if echo_active || self.echo > 0.0 { start = start.max(self.echo * 2.5); 5 } else { 3 };
+        if echo_active && self.onset.is_none() {
+            self.echo_chunks += 1;
+            // Learn how loud JARVIS's own voice is in the microphone before listening for the user.
+            if self.echo_chunks <= 6 {
+                self.echo = self.echo.max(level);
+                return Step::Continue;
+            }
+        }
         let stop = (self.floor * 2.0).max(MIN_SPEECH_RMS * 0.75);
         match self.onset {
             None => {
                 if level > start {
                     self.voiced_run += 1;
                     // 150 ms of sustained sound filters out clicks, taps and keyboard noise.
-                    if self.voiced_run >= 3 {
+                    if self.voiced_run >= needed {
+                        self.barged = echo_active;
                         let back = CHUNK * self.voiced_run + PREROLL_MS * RATE / 1000;
                         self.onset = Some(position.saturating_sub(back));
                         self.voiced_chunks = self.voiced_run;
@@ -144,8 +165,12 @@ impl Detector {
                     }
                 } else {
                     self.voiced_run = 0;
-                    // Track slowly changing background noise (fans, traffic).
-                    self.floor = (self.floor * 0.9 + level * 0.1).min(900.0);
+                    if echo_active {
+                        self.echo = level.max(self.echo * 0.97);
+                    } else {
+                        // Track slowly changing background noise (fans, traffic).
+                        self.floor = (self.floor * 0.9 + level * 0.1).min(900.0);
+                    }
                 }
                 Step::Continue
             }
@@ -175,12 +200,13 @@ pub fn record(
 ) -> Result<()> {
     let mut device = open()?;
     let _ = app.emit("mic", json!({"phase":"listening"}));
-    let started = Instant::now();
     let mut pcm: Vec<i16> = Vec::with_capacity(RATE * 16);
     let mut detector = Detector::new();
     let mut next = 0usize;
     let mut finished = false;
     let mut last_level = Instant::now() - Duration::from_secs(1);
+    // The wait for speech starts when JARVIS finishes talking, so a long reply never times the user out.
+    let mut waiting_since = Instant::now();
     while !finished {
         if cancelled() {
             return Err("Speech capture cancelled".into());
@@ -188,7 +214,7 @@ pub fn record(
         let header: *mut WAVEHDR = &mut *device.headers[next];
         let flags = unsafe { std::ptr::read_volatile(std::ptr::addr_of!((*header).dwFlags)) };
         if flags & WHDR_DONE == 0 {
-            if started.elapsed() > settings.wait_for_speech + MAX_UTTERANCE + Duration::from_secs(2) {
+            if waiting_since.elapsed() > settings.wait_for_speech + MAX_UTTERANCE + Duration::from_secs(2) {
                 break;
             }
             std::thread::sleep(Duration::from_millis(8));
@@ -211,15 +237,19 @@ pub fn record(
             last_level = Instant::now();
             let _ = app.emit("mic", json!({"level":(level / 2500.0).min(1.0)}));
         }
-        match detector.push(level, pcm.len()) {
+        let echo = (settings.echo_active)();
+        if echo && detector.onset.is_none() {
+            waiting_since = Instant::now();
+        }
+        match detector.push(level, pcm.len(), echo) {
             Step::SpeechStarted => {
-                let _ = app.emit("mic", json!({"phase":"speech"}));
+                let _ = app.emit("mic", json!({"phase": if detector.barged { "barge" } else { "speech" }}));
             }
             Step::Finished => finished = true,
             Step::Continue => {}
         }
         match detector.onset {
-            None if started.elapsed() > settings.wait_for_speech => {
+            None if waiting_since.elapsed() > settings.wait_for_speech => {
                 return Err("No audible speech captured".into());
             }
             Some(onset) if (pcm.len() - onset) > MAX_UTTERANCE.as_secs() as usize * RATE => finished = true,
@@ -280,7 +310,7 @@ mod tests {
         let mut d = Detector::new();
         let mut finished = false;
         for (i, &l) in levels.iter().enumerate() {
-            if let Step::Finished = d.push(l, (i + 1) * CHUNK) {
+            if let Step::Finished = d.push(l, (i + 1) * CHUNK, false) {
                 finished = true;
                 break;
             }
@@ -322,6 +352,20 @@ mod tests {
         assert!(run(&levels).0.is_none(), "a slightly louder room is not speech");
         levels.extend([2500.0; 10]);
         assert!(run(&levels).0.is_some());
+    }
+
+    #[test]
+    fn own_voice_echo_does_not_interrupt_but_the_user_does() {
+        let mut d = Detector::new();
+        let mut pos = 0;
+        let mut feed = |d: &mut Detector, level: f32, echo: bool| { pos += CHUNK; d.push(level, pos, echo) };
+        for _ in 0..4 { feed(&mut d, 150.0, false); }
+        // JARVIS talking: its echo swings between 600 and 2400 for two seconds.
+        for i in 0..40 { assert!(matches!(feed(&mut d, if i % 3 == 0 { 2400.0 } else { 600.0 }, true), Step::Continue), "echo must not trigger"); }
+        assert!(d.onset.is_none());
+        // The user speaks over it, much louder and sustained.
+        let started = (0..6).any(|_| matches!(feed(&mut d, 9000.0, true), Step::SpeechStarted));
+        assert!(started && d.barged);
     }
 
     #[test]
