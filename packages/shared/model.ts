@@ -256,9 +256,11 @@ export function headsUp(records: { id: string; kind: string; title: string; dueA
 
 /** The once-a-day status line JARVIS says when it comes online. */
 export function onlineGreeting(name: string, hour: number, openTasks: { title: string; dueAt?: string }[], nextEvent: { title: string; dueAt: string } | null, weather: { temperature: number; description: string } | null): string {
-  const who = name.toLowerCase() === 'sir' ? 'sir' : name;
   const part = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
-  const bits = [`${part}, ${who}. All systems are online.`];
+  // Rotate between "sir" and the owner's name so the greeting never sounds scripted.
+  const named = name.toLowerCase() !== 'sir';
+  const openers = named ? [`${part}, sir. All systems are online.`, `Welcome back, ${name}. Your workspace is ready.`, `${part}, ${name}. At your service.`] : [`${part}, sir. All systems are online.`];
+  const bits = [openers[new Date().getDate() % openers.length]];
   if (weather) bits.push(`It's ${Math.round(weather.temperature)} degrees and ${weather.description.toLowerCase()}.`);
   if (nextEvent) bits.push(`Next on your calendar: ${nextEvent.title} at ${new Date(nextEvent.dueAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.`);
   bits.push(openTasks.length ? `You have ${openTasks.length} open task${openTasks.length === 1 ? '' : 's'}${openTasks.length <= 2 ? ': ' + openTasks.map(t => t.title).join(' and ') : ''}.` : 'Your task list is clear.');
