@@ -48,7 +48,7 @@ fn read_json(response: reqwest::blocking::Response) -> Result<Value> {
     serde_json::from_slice(&bytes).map_err(|_| "Provider returned invalid JSON".into())
 }
 pub fn credential_set(app: &AppHandle, name: &str, value: &str) -> Result<()> {
-    if !["ai", "google", "google_client", "groq"].contains(&name) || value.len() > 32000 {
+    if !["ai", "google", "google_client", "groq", "vapid"].contains(&name) || value.len() > 32000 {
         return Err("Invalid credential".into());
     }
     let bytes = crate::windows::protect(value.as_bytes())?;

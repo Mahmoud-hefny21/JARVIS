@@ -16,6 +16,12 @@ use tauri::{Emitter, Manager};
 pub const PORT: u16 = 17840;
 const PAGE: &str = include_str!("../../mobile/index.html");
 const ICON: &[u8] = include_bytes!("../icons/icon.png");
+/// Service worker: shows JARVIS notifications pushed from the laptop, and opens the app when tapped.
+const WORKER: &str = r#"self.addEventListener('install',()=>self.skipWaiting());
+self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));
+self.addEventListener('push',e=>{let d={};try{d=e.data?e.data.json():{};}catch{d={body:e.data?e.data.text():''};}
+  e.waitUntil(self.registration.showNotification(d.title||'J.A.R.V.I.S.',{body:d.body||'',icon:'/icon.png',badge:'/icon.png'}));});
+self.addEventListener('notificationclick',e=>{e.notification.close();e.waitUntil(clients.matchAll({type:'window',includeUncontrolled:true}).then(l=>l.length?l[0].focus():clients.openWindow('/')));});"#;
 const MANIFEST: &str = r##"{"name":"J.A.R.V.I.S.","short_name":"JARVIS","start_url":"/","display":"standalone","background_color":"#02080d","theme_color":"#02080d","icons":[{"src":"/icon.png","sizes":"256x256","type":"image/png"}]}"##;
 
 /// When the verified owner last asked from the phone (ms since the Unix epoch).
@@ -116,6 +122,24 @@ fn handle(app: &tauri::AppHandle, mut stream: TcpStream) -> Result<()> {
         ("GET", "/") => send(&mut stream, "200 OK", "text/html; charset=utf-8", PAGE.as_bytes()),
         ("GET", "/manifest.webmanifest") => send(&mut stream, "200 OK", "application/manifest+json", MANIFEST.as_bytes()),
         ("GET", "/icon.png") => send(&mut stream, "200 OK", "image/png", ICON),
+        ("GET", "/sw.js") => send(&mut stream, "200 OK", "text/javascript; charset=utf-8", WORKER.as_bytes()),
+        ("GET", "/api/push/key") => {
+            let reply = match crate::push::public_key(app) { Ok(key) => json!({"key": key}), Err(error) => json!({"error": error}) };
+            send(&mut stream, "200 OK", "application/json; charset=utf-8", reply.to_string().as_bytes())
+        }
+        ("POST", "/api/push/subscribe") => {
+            if length == 0 || length > 4000 {
+                return send(&mut stream, "413 Payload Too Large", "text/plain", b"Subscription too large.");
+            }
+            let mut body = vec![0; length];
+            reader.read_exact(&mut body).map_err(|_| "Bad request")?;
+            let sub = serde_json::from_slice::<Value>(&body).unwrap_or(Value::Null);
+            let reply = match crate::push::subscribe(app, &sub).and_then(|_| crate::push::send(app, "J.A.R.V.I.S.", "Notifications are on, sir. Reminders will reach you here.")) {
+                Ok(sent) => json!({"ok": true, "sent": sent}),
+                Err(error) => json!({"error": error}),
+            };
+            send(&mut stream, "200 OK", "application/json; charset=utf-8", reply.to_string().as_bytes())
+        }
         ("GET", "/api/version") => send(&mut stream, "200 OK", "application/json; charset=utf-8", json!({"version": version()}).to_string().as_bytes()),
         ("POST", "/api/ask") => {
             if length == 0 || length > 16_000 {

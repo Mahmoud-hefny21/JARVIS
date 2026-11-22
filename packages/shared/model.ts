@@ -30,7 +30,7 @@ export type OverviewLayout=z.infer<typeof OverviewLayoutSchema>;
 export const SettingsSchema = z.object({
   name: z.string().trim().min(1).max(60).default('Sir'), role: z.string().max(100).default('Personal workspace'),
   interests: z.string().max(240).default('Development, learning, and everything in between.'),
-  lowPower: z.boolean().default(false), reducedMotion: z.boolean().default(false), dnd: z.boolean().default(false),
+  lowPower: z.boolean().default(false), reducedMotion: z.boolean().default(false), oneScreen: z.boolean().default(true), dnd: z.boolean().default(false),
   quietStart: z.number().int().min(0).max(23).default(22), quietEnd: z.number().int().min(0).max(23).default(7),
   sttEngine:z.enum(['sapi','whisper']).default('sapi'),
   wakeWordEnabled:z.boolean().default(true),

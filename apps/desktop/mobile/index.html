@@ -69,6 +69,8 @@ input{flex:1;min-width:0;font:inherit;font-size:16px;color:#e5f3fa;background:#0
 input:focus{border-color:#5be7ff}
 button.send{width:44px;height:44px;border-radius:50%;border:0;background:#32d8ff;color:#03202c;font-size:18px;font-weight:700}
 button.send:disabled{opacity:.5}
+.pushbtn{border:1px solid #1f6f88;background:#06151f;color:#9eefff;border-radius:999px;padding:8px 16px;font:inherit;font-size:14px}
+.pushbtn[hidden]{display:none}
 @media (prefers-reduced-motion:reduce){.ws-dial *,.ws-ring,.ws-radar{animation:none!important}}
 </style>
 </head>
@@ -76,6 +78,7 @@ button.send:disabled{opacity:.5}
 <main class="stage">
   <div class="core-wrap"><div class="ws-core" id="core" role="button" aria-label="Talk to JARVIS"></div></div>
   <div class="doing" id="doing">Ready</div>
+  <button class="pushbtn" id="pushbtn" hidden>🔔 Turn on notifications</button>
   <div class="reply" id="reply" dir="auto">Good to see you, sir.</div>
   <section class="card" id="card" aria-live="polite"><button class="closecard" id="closecard" aria-label="Close card">×</button><div id="cardbody" dir="auto"></div></section>
 </main>
@@ -153,6 +156,19 @@ coreEl.addEventListener('click',()=>{if(phase==='speaking'){stopVoice();return;}
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&convo)stopConvo();});
 
 form.addEventListener('submit',e=>{e.preventDefault();const text=input.value.trim();if(!text||phase==='thinking')return;input.value='';input.blur();audio();if(rec&&rec.state!=='inactive'){rec.onstop=null;rec.stop();}ask(text,false);});
+// Notifications: the laptop pushes reminders and alerts to this phone (iPhone allows it for home-screen apps).
+const pushBtn=document.getElementById('pushbtn');
+const b64u=s=>{const p='='.repeat((4-s.length%4)%4),b=atob((s+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(b,c=>c.charCodeAt(0));};
+async function subscribePush(){const reg=await navigator.serviceWorker.ready;const {key}=await (await fetch('/api/push/key')).json();if(!key)throw new Error('no key');
+  const sub=(await reg.pushManager.getSubscription())||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(key)});
+  const r=await (await fetch('/api/push/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(sub.toJSON())})).json();if(r.error)throw new Error(r.error);}
+const installed=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').then(()=>{
+  if(!('PushManager' in window)||!('Notification' in window))return;
+  if(Notification.permission==='granted')subscribePush().catch(()=>{});
+  else if(Notification.permission==='default'&&installed)pushBtn.hidden=false;}).catch(()=>{});}
+pushBtn.addEventListener('click',async()=>{pushBtn.disabled=true;try{if(await Notification.requestPermission()==='granted'){await subscribePush();pushBtn.hidden=true;reply.textContent='Notifications are on, sir.';}else{pushBtn.hidden=true;reply.textContent='Notifications stay off. You can allow them later in Settings → Notifications → JARVIS.';}}catch{reply.textContent='I couldn’t turn notifications on, sir. Is the laptop on with Tailscale connected?';}finally{pushBtn.disabled=false;}});
+
 // Auto-update: the app is served by the laptop, so a new JARVIS build reaches the phone by itself.
 // If the page changed while the app is open, reload quietly when it isn't busy.
 let shipped='';async function checkVersion(){if(document.body.classList.contains('working'))return;try{const v=(await (await fetch('/api/version',{cache:'no-store'})).json()).version;if(shipped&&v&&v!==shipped)location.reload();shipped=v||shipped;}catch{}}

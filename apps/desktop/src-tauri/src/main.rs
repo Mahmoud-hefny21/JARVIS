@@ -8,12 +8,14 @@ mod claude;
 mod db;
 mod groq;
 mod integrations;
+mod knowledge;
 mod mobile;
 mod intelligence;
 mod capture;
 mod offline_speech;
 mod ollama;
 mod placement;
+mod push;
 mod profiles;
 mod projects;
 mod runtime;
@@ -993,6 +995,10 @@ fn main() {
             runtime::start(app.handle().clone());
             if qa_dir.is_none() {
                 mobile::start(app.handle().clone());
+                let handle = app.handle().clone();
+                std::thread::spawn(move || {
+                    knowledge::space_guard(&handle);
+                });
             }
             let show =
                 tauri::menu::MenuItem::with_id(app, "show", "Open JARVIS", true, None::<&str>)?;
@@ -1091,6 +1097,7 @@ fn main() {
             active_window,
             wiki_lookup,
             mobile::mobile_reply,
+            knowledge::knowledge_search,
             actions::action_prepare,
             actions::action_execute,
             actions::action_cancel,

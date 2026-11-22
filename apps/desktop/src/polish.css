@@ -323,3 +323,33 @@ body.workshop-page .topbar{border-bottom-color:transparent}
 @media (max-width:640px){.dsp-hero{flex-direction:column}.dsp-hero img{width:100%}}
 @media (prefers-reduced-motion:reduce){.display-card.enter{animation:none}}
 
+
+/* One screen (Mahmoud's choice, 2026-11-22): just the core, centred; things he asks for slide in beside it.
+   The core's look and animation are locked (docs/design/core-reference.png); only position and the gold state change. */
+body.one-screen .workshop{grid-template-columns:1fr;grid-template-rows:1fr;justify-items:center;align-items:center}
+body.one-screen .ws-core{grid-column:1;grid-row:1;width:min(52vh,66vw);translate:0 0;transition:translate .6s cubic-bezier(.2,.8,.2,1)}
+body.one-screen .workshop .ws-state{top:calc(50% + min(26vh,33vw) + 12px);transition:color .8s ease,translate .6s cubic-bezier(.2,.8,.2,1)}
+/* Working: gold fades in smoothly and the rings keep their calm speed (no fast spinning). */
+.ws-ring.r1,.ws-ring.r3{transition:border-color .9s ease}
+.ws-seg.s1,.ws-ticks line.long{transition:stroke .9s ease}
+body[data-ai="processing"] .ws-ring.r1{animation-duration:14s}
+body[data-ai="processing"] .ws-ring.r3{animation-duration:9s}
+body[data-ai="processing"] .ws-seg.s1{animation-duration:26s}
+body[data-ai="processing"] .ws-radar{animation-duration:4.5s}
+body[data-ai="executing"] .ws-seg.s1{animation-duration:26s}
+/* A card beside the core: the core moves aside, the card slides in on the right, both return when it closes. */
+body.workshop-page.card-open .ws-core{translate:calc(-1 * min(22vw, 28vh)) 0}
+body.workshop-page.card-open .workshop .ws-state{translate:calc(-1 * min(22vw, 28vh)) 0}
+body.workshop-page .display-card{left:auto;right:max(24px,3vw);top:47%;transform:translateY(-50%);width:min(560px,44vw);max-height:min(70vh,calc(100vh - 230px))}
+body.workshop-page .display-card.enter{animation:dsp-side .5s cubic-bezier(.2,.8,.2,1)}
+@keyframes dsp-side{from{opacity:0;transform:translate(28px,-50%)}to{opacity:1;transform:translate(0,-50%)}}
+@media (max-width:900px){body.workshop-page.card-open .ws-core,body.workshop-page.card-open .workshop .ws-state{translate:0 0}body.workshop-page .display-card{right:16px;left:16px;width:auto;top:auto;bottom:96px;transform:none;max-height:52vh}}
+@media (prefers-reduced-motion:reduce){body.one-screen .ws-core,body.workshop-page .display-card.enter{transition:none;animation:none}}
+/* One screen: replies sit beside the core (right side); a card, when open, takes that place instead. */
+@media (min-width:901px){
+  body.one-screen.workshop-page .hud-reply{left:auto;right:max(24px,3vw);top:50%;bottom:auto;transform:translateY(-50%);width:min(500px,36vw)}
+  body.one-screen.workshop-page.reply-open:not(.card-open) .ws-core,body.one-screen.workshop-page.reply-open:not(.card-open) .workshop .ws-state{translate:calc(-1 * min(17vw, 24vh)) 0}
+  body.one-screen.workshop-page.card-open .hud-reply{display:none}
+}
+/* Arabic replies read right-to-left, English left-to-right, each by its own first letters. */
+.hud-reply .hud-jarvis,.hud-reply .hud-you{unicode-bidi:plaintext;text-align:start}
