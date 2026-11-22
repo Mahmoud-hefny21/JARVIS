@@ -18,6 +18,16 @@ const PAGE: &str = include_str!("../../mobile/index.html");
 const ICON: &[u8] = include_bytes!("../icons/icon.png");
 const MANIFEST: &str = r##"{"name":"J.A.R.V.I.S.","short_name":"JARVIS","start_url":"/","display":"standalone","background_color":"#02080d","theme_color":"#02080d","icons":[{"src":"/icon.png","sizes":"256x256","type":"image/png"}]}"##;
 
+/// When the verified owner last asked from the phone (ms since the Unix epoch).
+static OWNER_ASKED_AT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+fn now_ms() -> u64 {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0)
+}
+/// True for two minutes after a verified owner request, so phone commands can run like spoken ones.
+pub fn owner_request_active() -> bool {
+    now_ms().saturating_sub(OWNER_ASKED_AT.load(std::sync::atomic::Ordering::SeqCst)) < 120_000
+}
+
 fn waiting() -> &'static Mutex<HashMap<String, mpsc::Sender<Value>>> {
     static W: OnceLock<Mutex<HashMap<String, mpsc::Sender<Value>>>> = OnceLock::new();
     W.get_or_init(|| Mutex::new(HashMap::new()))
@@ -51,6 +61,7 @@ fn import_groq_key(app: &tauri::AppHandle) {
 
 pub fn start(app: tauri::AppHandle) {
     import_groq_key(&app);
+    warm_voice();
     std::thread::spawn(move || {
         let Ok(listener) = TcpListener::bind(("127.0.0.1", PORT)) else {
             eprintln!("phone app: port {PORT} unavailable");
@@ -105,7 +116,7 @@ fn handle(app: &tauri::AppHandle, mut stream: TcpStream) -> Result<()> {
         ("GET", "/") => send(&mut stream, "200 OK", "text/html; charset=utf-8", PAGE.as_bytes()),
         ("GET", "/manifest.webmanifest") => send(&mut stream, "200 OK", "application/manifest+json", MANIFEST.as_bytes()),
         ("GET", "/icon.png") => send(&mut stream, "200 OK", "image/png", ICON),
-        ("GET", "/api/version") => send(&mut stream, "200 OK", "application/json", json!({"version": version()}).to_string().as_bytes()),
+        ("GET", "/api/version") => send(&mut stream, "200 OK", "application/json; charset=utf-8", json!({"version": version()}).to_string().as_bytes()),
         ("POST", "/api/ask") => {
             if length == 0 || length > 16_000 {
                 return send(&mut stream, "413 Payload Too Large", "text/plain", b"Message too long.");
@@ -119,6 +130,7 @@ fn handle(app: &tauri::AppHandle, mut stream: TcpStream) -> Result<()> {
                 .map(|s| s.trim().chars().take(2000).collect::<String>())
                 .filter(|s| !s.is_empty())
                 .ok_or("Empty message")?;
+            OWNER_ASKED_AT.store(now_ms(), std::sync::atomic::Ordering::SeqCst);
             let id = format!("{:x}", rand_id());
             let (tx, rx) = mpsc::channel();
             waiting().lock().map_err(|_| "Phone link unavailable")?.insert(id.clone(), tx);
@@ -127,7 +139,7 @@ fn handle(app: &tauri::AppHandle, mut stream: TcpStream) -> Result<()> {
                 json!({"reply": "That took too long, sir. Please try again."})
             });
             waiting().lock().map_err(|_| "Phone link unavailable")?.remove(&id);
-            send(&mut stream, "200 OK", "application/json", answer.to_string().as_bytes())
+            send(&mut stream, "200 OK", "application/json; charset=utf-8", answer.to_string().as_bytes())
         }
         ("POST", "/api/listen") => {
             if length == 0 || length > 6_000_000 {
@@ -140,7 +152,7 @@ fn handle(app: &tauri::AppHandle, mut stream: TcpStream) -> Result<()> {
                 Ok(text) => json!({"text": text}),
                 Err(error) => json!({"error": error}),
             };
-            send(&mut stream, "200 OK", "application/json", result.to_string().as_bytes())
+            send(&mut stream, "200 OK", "application/json; charset=utf-8", result.to_string().as_bytes())
         }
         ("POST", "/api/speak") => {
             if length == 0 || length > 16_000 {
@@ -175,39 +187,92 @@ fn authorized(app: &tauri::AppHandle, login: &str) -> Result<bool> {
 }
 
 /// JARVIS's own voice for the phone: the same SAPI voices as the PC (Ryan for English, Shakir for Arabic),
-/// rendered to a WAV file instead of the speakers. Text goes in on stdin as JSON, never on the command line.
-fn speech_wav(text: &str) -> Result<Vec<u8>> {
+/// rendered to WAV. One PowerShell host stays loaded (voices enumerated once), so each reply skips the
+/// ~3 s process and voice start-up. Requests go in on stdin as JSON lines, never on the command line.
+struct VoiceHost {
+    child: std::process::Child,
+    input: std::process::ChildStdin,
+    output: BufReader<std::process::ChildStdout>,
+}
+fn voice_host() -> &'static Mutex<Option<VoiceHost>> {
+    static H: OnceLock<Mutex<Option<VoiceHost>>> = OnceLock::new();
+    H.get_or_init(|| Mutex::new(None))
+}
+fn start_voice_host() -> Result<VoiceHost> {
     use std::os::windows::process::CommandExt;
     use std::process::{Command, Stdio};
+    let script = r#"$ErrorActionPreference='Stop'; [Console]::InputEncoding=[Text.UTF8Encoding]::new($false)
+$v=New-Object -ComObject SAPI.SpVoice; $all=$v.GetVoices(); $tokens=@(for($i=0;$i -lt $all.Count;$i++){$all.Item($i)})
+[Console]::Out.WriteLine('ready'); [Console]::Out.Flush()
+while($null -ne ($line=[Console]::In.ReadLine())){
+  try{ $c=$line.TrimStart([char]0xFEFF)|ConvertFrom-Json
+    $wants=if(@($c.text.ToCharArray()|Where-Object{[int]$_ -ge 0x600 -and [int]$_ -le 0x6FF}).Count -gt 0){'Shakir','Arabic'}else{'Ryan','Thomas','United Kingdom','Guy'}
+    :pick foreach($w in $wants){foreach($t in $tokens){if($t.GetDescription() -like "*$w*"){$v.Voice=$t;break pick}}}
+    $s=New-Object -ComObject SAPI.SpFileStream; $s.Format.Type=22; $s.Open($c.file,3); $v.AudioOutputStream=$s; [void]$v.Speak($c.text); $s.Close()
+    [Console]::Out.WriteLine('done') } catch { [Console]::Out.WriteLine('error') }
+  [Console]::Out.Flush() }"#;
+    let mut child = Command::new("powershell.exe")
+        .args(["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", script])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .creation_flags(0x0800_0000)
+        .spawn()
+        .map_err(|_| "Voice unavailable")?;
+    let input = child.stdin.take().ok_or("Voice unavailable")?;
+    let mut output = BufReader::new(child.stdout.take().ok_or("Voice unavailable")?);
+    let mut ready = String::new();
+    output.read_line(&mut ready).map_err(|_| "Voice unavailable")?;
+    if ready.trim() != "ready" {
+        let _ = child.kill();
+        return Err("Voice unavailable".into());
+    }
+    Ok(VoiceHost { child, input, output })
+}
+/// Starts the voice host in the background so the first phone reply doesn't pay the start-up.
+pub fn warm_voice() {
+    std::thread::spawn(|| {
+        if let Ok(mut host) = voice_host().lock() {
+            if host.is_none() {
+                *host = start_voice_host().ok();
+            }
+        }
+    });
+}
+fn speech_wav(text: &str) -> Result<Vec<u8>> {
     let text = text.trim();
     if text.is_empty() {
         return Err("Nothing to say".into());
     }
     let file = std::env::temp_dir().join(format!("jarvis-phone-{:x}.wav", rand_id()));
-    let script = r#"$ErrorActionPreference='Stop'; [Console]::InputEncoding=[Text.UTF8Encoding]::new($false)
-$c=[Console]::In.ReadToEnd().TrimStart([char]0xFEFF)|ConvertFrom-Json
-$v=New-Object -ComObject SAPI.SpVoice; $all=$v.GetVoices(); $tokens=@(for($i=0;$i -lt $all.Count;$i++){$all.Item($i)})
-$wants=if(@($c.text.ToCharArray()|Where-Object{[int]$_ -ge 0x600 -and [int]$_ -le 0x6FF}).Count -gt 0){'Shakir','Arabic'}else{'Ryan','Thomas','United Kingdom','Guy'}
-:pick foreach($w in $wants){foreach($t in $tokens){if($t.GetDescription() -like "*$w*"){$v.Voice=$t;break pick}}}
-$s=New-Object -ComObject SAPI.SpFileStream; $s.Format.Type=22; $s.Open($c.file,3); $v.AudioOutputStream=$s; [void]$v.Speak($c.text); $s.Close()"#;
-    let mut child = Command::new("powershell.exe")
-        .args(["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", script])
-        .stdin(Stdio::piped())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .creation_flags(0x0800_0000)
-        .spawn()
-        .map_err(|_| "Voice unavailable")?;
-    if let Some(mut input) = child.stdin.take() {
-        input
-            .write_all(json!({"text": text, "file": file.to_string_lossy()}).to_string().as_bytes())
-            .map_err(|_| "Voice unavailable")?;
+    let mut guard = voice_host().lock().map_err(|_| "Voice unavailable")?;
+    for attempt in 0..2 {
+        if guard.is_none() {
+            *guard = Some(start_voice_host()?);
+        }
+        let host = guard.as_mut().ok_or("Voice unavailable")?;
+        let request = json!({"text": text, "file": file.to_string_lossy()}).to_string() + "\n";
+        let mut reply = String::new();
+        let ok = host.input.write_all(request.as_bytes()).and_then(|_| host.input.flush()).is_ok()
+            && host.output.read_line(&mut reply).map(|n| n > 0).unwrap_or(false)
+            && reply.trim() == "done";
+        if ok {
+            break;
+        }
+        // The host died or failed: restart it once, then give up.
+        if let Some(mut dead) = guard.take() {
+            let _ = dead.child.kill();
+        }
+        if attempt == 1 {
+            let _ = std::fs::remove_file(&file);
+            return Err("Voice unavailable".into());
+        }
     }
-    let ok = child.wait().map(|s| s.success()).unwrap_or(false);
-    let wav = std::fs::read(&file).ok();
+    drop(guard);
+    let wav = std::fs::read(&file).map_err(|_| "Voice unavailable");
     let _ = std::fs::remove_file(&file);
     match wav {
-        Some(bytes) if ok && bytes.len() > 44 => Ok(bytes),
+        Ok(bytes) if bytes.len() > 44 => Ok(bytes),
         _ => Err("Voice unavailable".into()),
     }
 }

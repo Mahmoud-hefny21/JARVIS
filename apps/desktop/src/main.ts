@@ -3,7 +3,7 @@ import './overview.css';
 import './polish.css';
 setTimeout(()=>document.body.classList.add('hud-booted'),1500);
 import { listen } from '@tauri-apps/api/event';
-import { createEntry, Entry, EntryKind, localInsight, localIntent, parseTaskWhen, matchTask, headsUp, onlineGreeting, translateCommandWords, monitorIndex, nextDue, quiet, shouldSpeakResponse, voiceStopRecovery, shouldRetryWithWhisper, shouldUseWhisperForDictation, spokenFailureMessage, SettingsSchema, WeatherSchema, WorkspacePresetSchema, OverviewPanelId } from '../../../packages/shared/model';
+import { createEntry, Entry, EntryKind, localInsight, localIntent, wantsEgyptianArabic, parseTaskWhen, matchTask, headsUp, onlineGreeting, translateCommandWords, monitorIndex, nextDue, quiet, shouldSpeakResponse, voiceStopRecovery, shouldRetryWithWhisper, shouldUseWhisperForDictation, spokenFailureMessage, SettingsSchema, WeatherSchema, WorkspacePresetSchema, OverviewPanelId } from '../../../packages/shared/model';
 import { command, native, ProjectInfo, SecurityStatus, Telemetry, Tool, UserTask, withUserTask, cancelUserTasks } from './bridge';
 import { directScopes } from '../../../packages/shared/task-intent';
 import * as sound from './audio';
@@ -162,10 +162,18 @@ function voiceLog(stage:string){void state.activity('Voice: '+stage,new Date().t
 // Commands the AI may run on the user's behalf after understanding free speech (all reversible or allowlisted).
 const AUTO_ACTIONS=new Set(['unmute','mute','site','working-on','wake','pod','task','task-delete','task-done','remember','recall','app-window','monitor','chrome','vscode','briefing','status','preference']);
 let pendingAction='';
+// Learning from Mahmoud: when the brain works out which command a new phrasing means, the phrasing is saved here and
+// runs instantly next time without the brain. Per-PC convenience cache (rebuilds itself), capped at 400 phrases.
+const LEARNED_KEY='jarvis-learned-phrases-v1';
+function learnedPhrases():Record<string,string>{try{return JSON.parse(localStorage.getItem(LEARNED_KEY)??'{}')??{};}catch{return {};}}
+function learnPhrase(input:string,commandText:string){const key=normalizeUtterance(input);if(key.length<3||key.length>160||localIntent(input)||!localIntent(commandText))return;
+  try{const all=learnedPhrases();delete all[key];all[key]=commandText;const keys=Object.keys(all);for(const k of keys.slice(0,Math.max(0,keys.length-400)))delete all[k];localStorage.setItem(LEARNED_KEY,JSON.stringify(all));}catch{/* storage unavailable */}}
+function learnedCommand(input:string):string|null{const c=learnedPhrases()[normalizeUtterance(input)];return c&&localIntent(c)?c:null;}
 async function runUserText(input:string,event:Pick<Event,'isTrusted'>,directVoiceRequest=false,translated=false){
   lastInteraction=Date.now();
   if(directVoiceRequest)input=repairSpoken(input);
   input=translateCommandWords(input); // Franco/Arabic command verbs → English commands
+  if(!translated&&!localIntent(input)){const learned=learnedCommand(input);if(learned)input=learned;}
   const normalized=normalizeUtterance(input);
   if(native&&installedApps===null&&(/\b(open|launch|start)\b|^افتح/.test(normalized)))await loadInstalledApps(false);
   const result=await withUserTask(event,directScopes(input,conversationContext.snapshot(),projectInfo?.id,state.settings.workspacePresets,installedApps??[]),task=>answer(input,task,directVoiceRequest));
@@ -439,11 +447,12 @@ async function runWorkspace(name:string,task?:UserTask) {
   }
   return `Workspace “${preset.name}” opened: ${completed.join('; ')}. No applications were closed.`;
 }
-// Phone app: questions from the owner's iPhone (via Tailscale) run through answer() without speaking on the PC;
+// Phone app: questions from the owner's iPhone (via Tailscale) take the same path as the PC (runUserText → answer,
+// including Franco command words and AI-chosen actions) without speaking on the PC;
 // the reply text and any card shown are sent back to the phone. One phone question at a time.
 let mobileTurn=false,mobileReply='',mobileQueue:Promise<void>=Promise.resolve();
 function askedFromPhone(id:string,text:string,voice=false){mobileQueue=mobileQueue.then(async()=>{const before=document.querySelector('#display-card .dsp-body')?.innerHTML??'';const wasHidden=document.querySelector<HTMLElement>('#display-card')?.hidden??true;
-  mobileTurn=true;mobileReply='';try{await answer(text,undefined,voice);}catch(error){mobileReply=spokenFailureMessage(error);}finally{mobileTurn=false;}
+  mobileTurn=true;mobileReply='';try{await runUserText(text,{isTrusted:true},voice);}catch(error){mobileReply=spokenFailureMessage(error);}finally{mobileTurn=false;}
   const el=document.querySelector<HTMLElement>('#display-card'),body=el?.querySelector('.dsp-body')?.innerHTML??'';const card=el&&!el.hidden&&(wasHidden||body!==before)?`<h2>${esc(el.querySelector('h2')?.textContent??'')}</h2>${body}`:null;
   const reply=mobileReply||'Done, sir.';await command('mobile_reply',{id,reply,card,spoken:spokenSummary(reply,320)}).catch(()=>undefined);});}
 async function answer(input:string,task?:UserTask,directVoiceRequest=false) {
@@ -466,7 +475,7 @@ async function answer(input:string,task?:UserTask,directVoiceRequest=false) {
     else if(intent?.action==='working-on'){response=workingOn();}
     else if(intent?.action==='unmute'){setMuted(false);response='I’m back, sir.';}
     else if(intent?.action==='mute'){setMuted(true);muteRequested=true;replyEpoch++;await command('speech_stop').catch(()=>undefined);sound.stop('music',0);sound.stop('wake',0);return;}
-    else if(intent?.action==='site'){pendingAction='open '+intent.text;return;}
+    else if(intent?.action==='site'){pendingAction='open '+intent.text;mobileReply='Opening '+new URL(intent.text!).hostname.replace(/^(?:www|web|open)\./,'').split('.')[0].replace(/^./,c=>c.toUpperCase())+', sir.';return;}
     else if(intent?.action==='pod'){response=podSummary(intent.text!);flashPod(intent.text==='weather'?'comms':intent.text!);const card=localDisplay({tasks:'tasks',comms:'emails',weather:'weather',next:'schedule'}[intent.text!]??'');if(card)fillDisplay(card.title,card.html);}
     else if(intent?.action==='task-delete'||intent?.action==='task-done'){const open=state.list('task').filter(t=>!t.done);const hit=matchTask(intent.text??'',open);
       if(!hit)response=open.length?`I couldn’t find that one. Your open tasks: ${open.slice(0,5).map(t=>t.title).join(', ')}.`:'Your task list is already empty.';
@@ -516,12 +525,13 @@ async function answer(input:string,task?:UserTask,directVoiceRequest=false) {
     else if(intent){await performAction(intent.action,task);response='The Windows action was accepted. Disruptive actions require your confirmation.';}
     else if(native||state.settings.aiMode!=='compatible'||state.settings.aiUrl){
       // Learns what the user likes: personal preferences are saved to memory automatically and fed back into every answer.
-      if(/^(?:jarvis[, ]+)?(?:i (?:really )?(?:like|love|prefer|hate|enjoy|don'?t like|usually|always|never)\b|my favou?rite\b|call me\b|i'?m allergic\b|(?:انا )?(?:بحب|بكره|مبحبش|بفضل)\b)/iu.test(input.trim())&&!state.list('memory').some(m=>m.body===input.trim()))void state.add('memory',{title:'Preference: '+input.trim().slice(0,200),body:input.trim().slice(0,1000)},task);const context=state.list('message').reverse().slice(directVoiceRequest?-4:['claude','hybrid'].includes(state.settings.aiMode)?-20:-8).map(m=>({role:m.role,content:m.body}));if(directVoiceRequest&&context.length)context[context.length-1]={...context[context.length-1],content:context[context.length-1].content+'\n\n(Spoken request: answer in one to three short sentences.)'};const terms=input.toLowerCase().split(/\s+/).filter(t=>t.length>3);const memories=(native?await command<Entry[]>('memory_search',{query:input.slice(0,150)}):state.list('memory').filter(m=>terms.some(t=>`${m.title} ${m.body}`.toLowerCase().includes(t)))).slice(0,4).map(m=>m.title+' '+m.body.slice(0,1000));memories.unshift(liveFacts());aiRequestId=crypto.randomUUID();partialAnswer='';streamSpeak=native&&!mobileTurn&&shouldSpeakResponse(state.settings,directVoiceRequest);earlySpoken='';earlySpeech=null;const seeScreen=native&&/\b(screen|on my (pc|computer|display)|what am i (looking at|seeing)|read this)\b|شاش/i.test(input);response=await command<string>('ai_chat',{messages:context,memories,requestId:aiRequestId,seeScreen});
-      // The model sometimes ends a normal answer with an ACTION line; run it and keep it out of what is shown and spoken.
+      if(/^(?:jarvis[, ]+)?(?:i (?:really )?(?:like|love|prefer|hate|enjoy|don'?t like|usually|always|never)\b|my favou?rite\b|call me\b|i'?m allergic\b|(?:انا )?(?:بحب|بكره|مبحبش|بفضل)\b)/iu.test(input.trim())&&!state.list('memory').some(m=>m.body===input.trim()))void state.add('memory',{title:'Preference: '+input.trim().slice(0,200),body:input.trim().slice(0,1000)},task);const context=state.list('message').reverse().slice(directVoiceRequest?-4:['claude','hybrid'].includes(state.settings.aiMode)?-20:-8).map(m=>({role:m.role,content:m.body}));if(directVoiceRequest&&context.length)context[context.length-1]={...context[context.length-1],content:context[context.length-1].content+'\n\n(Spoken request: answer in one to three short sentences.)'};if(wantsEgyptianArabic(input)&&context.length)context[context.length-1]={...context[context.length-1],content:context[context.length-1].content+'\n\n(Reply in natural Egyptian Arabic, Arabic script, call me يا فندم.)'};const terms=input.toLowerCase().split(/\s+/).filter(t=>t.length>3);const memories=(native?await command<Entry[]>('memory_search',{query:input.slice(0,150)}):state.list('memory').filter(m=>terms.some(t=>`${m.title} ${m.body}`.toLowerCase().includes(t)))).slice(0,4).map(m=>m.title+' '+m.body.slice(0,1000));memories.unshift(liveFacts());aiRequestId=crypto.randomUUID();partialAnswer='';streamSpeak=native&&!mobileTurn&&shouldSpeakResponse(state.settings,directVoiceRequest);earlySpoken='';earlySpeech=null;const seeScreen=native&&/\b(screen|on my (pc|computer|display)|what am i (looking at|seeing)|read this)\b|شاش/i.test(input);response=await command<string>('ai_chat',{messages:context,memories,requestId:aiRequestId,seeScreen});
+      // The model sometimes ends a normal answer with a stray ACTION line: drop it (never run it), keep the answer.
+      // Only a reply that is nothing but one ACTION line is treated as a command, as the persona instructs.
       const tailAct=/\S/.test(response.replace(/\s*\bACTION\s*:[^\n]*$/i,''))?response.match(/\s*\bACTION\s*:\s*["“']?([^\n]+?)["”']?[.!]?\s*$/i):null;if(tailAct)response=response.slice(0,tailAct.index).trim();
-      const act=tailAct?[tailAct[0],tailAct[1]] as const:response.trim().match(/^(?:ACTION|Say)\s*:\s*["“']?(.+?)["”']?[.!]?\s*$/i);const understood=act?localIntent(act[1]):null;
+      const act=tailAct?null:response.trim().match(/^(?:ACTION|Say)\s*:\s*["“']?(.+?)["”']?[.!]?\s*$/i);const understood=act?localIntent(act[1]):null;
       // The AI understood an action in the user's own words: run it instead of asking them to repeat it.
-      if(act&&understood&&AUTO_ACTIONS.has(understood.action)){pendingAction=act[1];return;}
+      if(act&&understood&&AUTO_ACTIONS.has(understood.action)){learnPhrase(input,act[1]);pendingAction=act[1];return;}
       if(act&&/^open https:\/\/[^\s]+$/i.test(act[1].trim())){pendingAction=act[1].trim();return;}}
     else response='I’m available for local commands, tasks, memories, and briefings. Advanced conversation needs an optional AI provider in Settings. No model is running in the background.';
     await state.add('message',{title:'JARVIS',body:response.slice(0,32000),role:'assistant'});hudAnswer(response);mobileReply=response;if(!mobileTurn&&shouldSpeakResponse(state.settings,directVoiceRequest)){try{const epoch=replyEpoch;const early=earlySpeech;streamSpeak=false;earlySpeech=null;if(early)await early;const rest=early&&response.startsWith(earlySpoken)?response.slice(earlySpoken.length).trim():response;earlySpoken='';const spoken=spokenSummary(rest,early?220:320);if(spoken&&epoch===replyEpoch)await speak(spoken); /* skipped when interrupted or muted */}catch(error){toast('Speech failed: '+String(error));}}

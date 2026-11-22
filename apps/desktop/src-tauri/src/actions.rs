@@ -214,7 +214,8 @@ pub fn user_task_begin(
             && url.port() == Some(1420));
     // Spoken requests come from the native microphone, so they count as the user's own input even when
     // another app (or another monitor) has focus; typed requests still need the focused window.
-    if window.label() != "main" || !local || !(window.is_focused().unwrap_or(false) || crate::offline_speech::heard_recently()) {
+    // Requests from the owner's iPhone (verified Tailscale identity, see mobile.rs) count the same way while they're answered.
+    if window.label() != "main" || !local || !(window.is_focused().unwrap_or(false) || crate::offline_speech::heard_recently() || crate::mobile::owner_request_active()) {
         return Err("Direct tasks require the focused trusted Windows user interface".into());
     }
     let state = window.state::<NativeState>();

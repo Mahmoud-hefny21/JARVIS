@@ -1,3 +1,5 @@
+import { timeToEnglish, fixFrancoVerb, PHRASES } from './vocabulary.ts';
+import { findSite, findTool, englishAppName } from './sites.ts';
 import { z } from 'zod';
 export const Kind = z.enum(['task', 'memory', 'project', 'event', 'message', 'activity', 'notification', 'draft']);
 export const RecordSchema = z.object({
@@ -147,6 +149,9 @@ export function localIntent(input: string): { action: string; text?: string } | 
   // "Open my WhatsApp Web (in Chrome)": well-known sites by name; anything else goes to the AI, which answers with the address.
   const siteMatch = t.match(/^(?:open|launch|go to|bring up|pull up|start)\s+(?:up\s+)?(?:my\s+|the\s+)?(.+?)(?:\s+(?:web|website|site|page))?(?:\s+(?:in|on|from|with)\s+(?:my\s+)?(?:chrome|the browser|browser|edge))?$/);
   if (siteMatch) { const url = siteUrl(siteMatch[1]); if (url) return { action: 'site', text: url }; }
+  // "I want to design a poster" / "3ayz a3mel poster" / "عايز احول pdf لوورد": open the best tool for it.
+  const goal = text.match(/^(?:i (?:want|need) to|i wanna|i'd like to|help me|(?:ana )?(?:3ayz|3ayez|3awz|3awez|me7tag|m7tag)|(?:انا )?(?:عايز|عاوز|محتاج))\s+(.{3,160})$/iu);
+  if (goal) { const tool = findTool(goal[1]); if (tool) return { action: 'site', text: tool.url }; }
   // "What am I working on?" in English, Franco-Arabic and Arabic.
   if (/^(?:what (?:am|was) i (?:working on|doing)|what have i been (?:working on|doing)|what was i just doing|where was i|ana kont ba3mel eh|ana ba3mel eh|kont ba3mel eh)$/.test(t) || /(?:كنت بعمل ايه|بعمل ايه|كنت فين)/u.test(t)) return { action: 'working-on' };
   // Wake-up phrases work wherever they are heard (wake listener, conversation, or typed).
@@ -168,7 +173,7 @@ export function localIntent(input: string): { action: string; text?: string } | 
   if(projectSearch&&!/[\r\n;&|`$<>]/.test(projectSearch[1]))return {action:'project-search',text:projectSearch[1].trim()};
   const research=text.match(/^(?:research|look up|search the web for)\s+([^\r\n]{3,500})$/i);
   if(research&&!/[\u0000-\u001f\u007f]/.test(research[1]))return {action:'research',text:research[1].trim()};
-  if(/^(?:close|hide|clear|dismiss) (?:the |that )?(?:display|screen|card|it|that)$|^(?:e2fel|2fel|eqfel) (?:el )?(?:screen|display|da|deh)$|^(?:اقفل|اخفي) (?:الشاشة|العرض|ده|دي)$/u.test(t))return {action:'show-close'};
+  if(/^(?:close|hide|clear|dismiss) (?:the |that )?(?:display|screen|card|it|that|الشاشة|الشاشه|العرض|الكارت|ده|دي|el screen|el card)$|^(?:e2fel|2fel|eqfel) (?:el )?(?:screen|display|da|deh)$|^(?:اقفل|اخفي) (?:الشاشة|العرض|ده|دي)$/u.test(t))return {action:'show-close'};
   // "Show me anything": English, Franco-Arabic and Arabic. Specific show-commands above win first.
   const show=text.match(/^(?:show(?: me)?|display|put up|pull up|bring up|(?:can you |could you )?show me|let me see|e3redli|e3rdli|e3rdly|3rdli|3rdly|warini|wareeni|wareny|warrini|وريني|ورّيني|اعرض(?:لي|ي لي)?|اعرضلي|عرضلي)\s+(?:(?:about|on|a|an|the)\s+)?([^\r\n]{2,200})$/iu);
   if(show&&!/[\u0000-\u001f\u007f]/.test(show[1]))return {action:'show',text:show[1].trim().replace(/[.!?؟]+$/u,'').replace(/\s+(?:on (?:the |my )?screen|please|for me|ala el screen|3al screen|على الشاشة)$/iu,'')};
@@ -214,7 +219,7 @@ const WEEKDAYS=['sunday','monday','tuesday','wednesday','thursday','friday','sat
 export function parseTaskWhen(input: string, now = new Date()): { title: string; dueAt?: string } {
   // Speech-to-text writes small numbers as words ("in two minutes", "half an hour").
   const NUMBERS: Record<string, string> = { a: '1', an: '1', one: '1', two: '2', three: '3', four: '4', five: '5', six: '6', seven: '7', eight: '8', nine: '9', ten: '10', fifteen: '15', twenty: '20', thirty: '30', forty: '40', 'forty five': '45', fifty: '50' };
-  let text = input.trim().replace(/[.!?،]+$/u, '')
+  let text = timeToEnglish(input).trim().replace(/[.!?،؟]+$/u, '')
     .replace(/\bin half an hour\b/i, 'in 30 minutes')
     .replace(/\bin (a|an|one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|forty five|forty|fifty) (minute|minutes|min|hour|hours)\b/i, (_, n: string, unit: string) => `in ${NUMBERS[n.toLowerCase()]} ${unit}`)
     .replace(/\bat (one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b/i, (_, n: string) => `at ${({ eleven: '11', twelve: '12' } as Record<string, string>)[n.toLowerCase()] ?? NUMBERS[n.toLowerCase()]}`);
@@ -222,7 +227,8 @@ export function parseTaskWhen(input: string, now = new Date()): { title: string;
   const take = (re: RegExp) => { const m = text.match(re); if (m) text = (text.slice(0, m.index) + ' ' + text.slice(m.index! + m[0].length)).replace(/\s+/g, ' ').trim(); return m; };
   let m = take(/\bin (\d{1,3}) (minute|minutes|min|hour|hours)\b/i);
   if (m) { const d = new Date(now.getTime() + Number(m[1]) * (m[2].startsWith('h') ? 3600000 : 60000)); return { title: tidy(text), dueAt: d.toISOString() }; }
-  if (take(/\b(tomorrow|tmrw)\b|بكر[ةه]/iu)) { day = new Date(now); day.setDate(day.getDate() + 1); }
+  if (take(/\b(?:the )?day after tomorrow\b/i)) { day = new Date(now); day.setDate(day.getDate() + 2); }
+  else if (take(/\b(tomorrow|tmrw)\b|بكر[ةه]/iu)) { day = new Date(now); day.setDate(day.getDate() + 1); }
   else if (take(/\btonight\b/i)) { day = new Date(now); hour = 20; }
   else if (take(/\btoday\b|النهارد[ةه]/iu)) day = new Date(now);
   else if ((m = take(new RegExp('\\b(?:next |on |this )?(' + WEEKDAYS.join('|') + ')\\b', 'i')))) {
@@ -295,7 +301,7 @@ const SITES: [RegExp, string][] = [
 export function siteUrl(name: string): string | null {
   const n = name.trim().toLowerCase().replace(/[.!?]+$/, '').replace(/(?:\s+(?:for me|please|now|real quick))+$/, '').replace(/\s+(?:web|website|site|page)$/, ' web').replace(/ web$/, (m) => m);
   for (const [re, url] of SITES) if (re.test(n)) return url;
-  return null;
+  return findSite(name);
 }
 
 /** Franco-Arabic and Arabic command words → the English verbs the command system understands. */
@@ -304,10 +310,26 @@ const COMMAND_WORDS: [RegExp, string][] = [
   [/^(?:(?:ya |hey )?jarvis[,.!\s]+)?(?:e2fel|2fel|ekfel|i2fel|اقفل|اقفلي|سكر)\s+/iu, 'close '],
   [/^(?:(?:ya |hey )?jarvis[,.!\s]+)?(?:emsa[7h]|im?sa7|امسح|احذف|شيل)\s+/iu, 'delete '],
   [/^(?:(?:ya |hey )?jarvis[,.!\s]+)?(?:dawar(?: 3la| ala)?|dawwar|دور على|دور|ابحث عن)\s+/iu, 'search for '],
-  [/^(?:(?:ya |hey )?jarvis[,.!\s]+)?(?:fakarny|fakkarni|فكرني)\s+/iu, 'remind me to '],
+  [/^(?:(?:ya |hey )?jarvis[,.!\s]+)?(?:fakkarny|fakarny|fakkarni|fakarni|fakrny|fkrny|fakerni|fakerny|ftakarny|فكرني|فكّرني|ذكرني|افتكرلي)\s+(?:(?:en|enny|eni|b|bel|be|ان|إن|إني|اني|بال|ب)\s+)?/iu, 'remind me to '],
 ];
+// Franco = Egyptian Arabic in Latin letters: digits standing for letters (3=ع, 7=ح, 2=ء, 5=خ, 8=غ) inside words,
+// or at least two common Franco words. Plain English with numbers ("2 apples") is not Franco.
+const FRANCO_WORDS=new Set(['ana','enta','enti','ezayak','ezayek','ezay','eh','eih','leh','fen','feen','emta','keda','kda','msh','mesh','mish','bokra','bukra','enharda','naharda','delwa2ty','dlw2ty','3ayz','3ayez','3awz','3amel','3amla','a3mel','e3mel','e3ml','ya','yala','yalla','tamam','5alas','khalas','ma3lesh','fakkarny','fakarny','faker','eftah','2fel','e2fel','sha8al','shaghal','3andy','3ndy','3andak','kam','meen','min','ahsan','awy','oly','2oly','2ol','kalem','ezzay','lesa','lessa','bas','bs','wala','walla','gamed','7aga','haga','kollo','kol']);
+export function wantsEgyptianArabic(input: string): boolean {
+  if (/[\u0600-\u06FF]/.test(input)) return true;
+  const words = input.toLowerCase().match(/[a-z0-9']+/g) ?? [];
+  if (words.some(w => /[a-z][2378]|[2378][a-z]/.test(w) && !/^\d+(st|nd|rd|th|am|pm|k|m|gb|mb|s)$/.test(w))) return true;
+  return words.filter(w => FRANCO_WORDS.has(w)).length >= 2;
+}
+// "open الآلة الحاسبة" → "open Calculator", so the installed-app lookup finds it.
+function withAppName(text: string): string {
+  const m = text.match(/^(open|launch|start)\s+(.+)$/i);
+  const app = m ? englishAppName(m[2]) : null;
+  return app ? `${m![1]} ${app}` : text;
+}
 export function translateCommandWords(input: string): string {
-  const text = input.trim();
-  for (const [re, verb] of COMMAND_WORDS) if (re.test(text)) return text.replace(re, verb).replace(/\b(?:el|al)\s+/i, '').replace(/^open (?:el|al)-?/i, 'open ');
-  return text;
+  const text = fixFrancoVerb(input.trim());
+  for (const [re, phrase] of PHRASES) if (re.test(text)) return text.replace(re, phrase);
+  for (const [re, verb] of COMMAND_WORDS) if (re.test(text)) return withAppName(text.replace(re, verb).replace(/\b(?:el|al)\s+/i, '').replace(/^open (?:el|al)-?/i, 'open '));
+  return withAppName(text);
 }
