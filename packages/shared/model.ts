@@ -156,7 +156,7 @@ export function localIntent(input: string): { action: string; text?: string } | 
   const pod = t.match(/^(?:show|show me|what are|what's|whats|what is|list|read|check|pull up|bring up)\s+(?:me\s+)?(?:my\s+|the\s+)?(tasks|task list|to ?dos?|schedule|calendar|agenda|next|mail|emails|inbox|weather)(?:\s+(?:today|now|for today))?$/)
     || (/^(?:what do i have(?: today)?|what's on my plate|whats on my plate|what's coming up|whats coming up)$/.test(t) ? ['', 'next'] : null);
   if (pod) { const k = pod[1]; return { action: 'pod', text: /task|todo/.test(k) ? 'tasks' : /mail|inbox/.test(k) ? 'comms' : k === 'weather' ? 'weather' : 'next' }; }
-  if (/^(add task|remind me to)\s+/i.test(text)) return { action: 'task', text: text.replace(/^(add task|remind me to)\s+/i, '').replace(/^[,:;.\-\s]+/, '').replace(/[.!?]+$/, '') };
+  if (/^(add task|remind me to)\s+/i.test(text)) return { action: 'task', text: text.replace(/^(add task|remind me to)\s+/i, '').replace(/\s*(?:ACTION|Say)\s*:[\s\S]*$/i, '').replace(/^[,:;.\-\s]+/, '').replace(/[.!?]+$/, '') };
   if (/^recall\s+/i.test(text)) return { action: 'recall', text: text.replace(/^recall\s+/i, '') };
   if (['briefing', 'daily briefing', 'good morning'].includes(t)) return { action: 'briefing' };
   if (/^(continue (what i was working on|my work|where i left off)( yesterday)?|resume my work|work continuity)$/.test(t)) return { action: 'continuity' };

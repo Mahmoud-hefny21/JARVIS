@@ -846,6 +846,30 @@ fn speech_stop(state: tauri::State<NativeState>) -> Result<()> {
 /// Set once Piper proves too slow on this PC; later replies use the instant Windows voice.
 static PIPER_TOO_SLOW: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
+/// Crash safety for the personal instance: Windows relaunches JARVIS if it crashes after running 60 s
+/// (Restart Manager), and any panic is appended to a small error log in the data folder.
+fn crash_safety() {
+    use windows_sys::Win32::System::Recovery::RegisterApplicationRestart;
+    let args: Vec<u16> = [0u16].to_vec();
+    // SAFETY: NUL-terminated UTF-16 command line; flags 0 = restart on crash and hang.
+    unsafe { RegisterApplicationRestart(args.as_ptr(), 0) };
+    let previous = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        if let Some(dir) = std::env::var_os("APPDATA").map(|d| PathBuf::from(d).join("com.jarvis.personal").join("logs")) {
+            let _ = std::fs::create_dir_all(&dir);
+            let file = dir.join("errors.log");
+            if std::fs::metadata(&file).map(|m| m.len() > 512 * 1024).unwrap_or(false) {
+                let _ = std::fs::rename(&file, dir.join("errors.old.log"));
+            }
+            if let Ok(mut log) = std::fs::OpenOptions::new().create(true).append(true).open(&file) {
+                use std::io::Write;
+                let _ = writeln!(log, "{} panic: {info}", chrono::Local::now().to_rfc3339());
+            }
+        }
+        previous(info);
+    }));
+}
+
 fn main() {
     let flag = std::env::var_os("JARVIS_ENABLE_TEST_PROFILE");
     let enabled = flag.as_deref() == Some(std::ffi::OsStr::new("1"));
@@ -867,6 +891,9 @@ fn main() {
     });
     // Every validated QA launch is independent; never reveal a personal instance.
     let isolated_qa = qa_dir.is_some();
+    if !isolated_qa {
+        crash_safety();
+    }
     let builder = if isolated_qa {
         tauri::Builder::default()
     } else {

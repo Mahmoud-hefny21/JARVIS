@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "build": "bun run typecheck && vite build --config apps/desktop/vite.config.ts",
     "build:windows": "node scripts/desktop.mjs build",
+    "install:windows": "node scripts/install-local.mjs",
     "benchmark": "node scripts/benchmark.mjs"
   },
   "dependencies": { "@tauri-apps/api": "^2.0.0", "zod": "^4.0.0" },
