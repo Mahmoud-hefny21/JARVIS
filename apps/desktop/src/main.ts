@@ -567,8 +567,9 @@ async function greetOnline(){
   try{localStorage.setItem('jarvis-greeted',key);}catch{}
   hudAlert(text);if(native&&shouldSpeakResponse(state.settings,true))await speak(text).catch(()=>{});
 }
+let lastSpokeAt=0;
 async function speak(text:string) {
-  sound.duck(true);try{return await speakNow(text);}finally{sound.duck(false);}
+  sound.duck(true);try{return await speakNow(text);}finally{sound.duck(false);lastSpokeAt=Date.now();}
 }
 async function speakNow(text:string) {
   // Talking over JARVIS needs headphones: on speakers its own voice would interrupt it (verified live), so it is opt-in.
@@ -633,7 +634,7 @@ async function cinematicWake(){
     if(mode==='instant'){await speak('Yes, sir?').catch(()=>undefined);return;}
     // Cinematic: the boot animation starts exactly when the wake sound actually starts playing.
     const started=(await sound.play('wake'))||(await sound.play('activation'));
-    voiceLog(started?'wake sound playing':'wake tone (no file)');
+    voiceLog(started?'wake sound playing':'wake tone (no file) '+sound.lastError);
     if(!started)sound.synthTone();
     document.body.classList.remove('ws-booted');render();
     void sound.play('music',{fadeInMs:1500,loop:true});
@@ -665,7 +666,9 @@ async function converse(){
       if(request!==speechRequest||!text||/^(stop|thanks|thank you|that'?s all|that is all|that'?ll be all|that will be all|goodbye|never ?mind|mute|be quiet|quiet|shut up|silence|enough|شكرا|خلاص|اسكت|بس)\b/i.test(text.replace(/^jarvis[,. ]*/i,''))){await command('speech_stop').catch(()=>{});break;}
       try{await runUserText(text,{isTrusted:true},true);if(muteRequested){muteRequested=false;break;}}catch(error){void state.activity('Voice request failed',String(error).slice(0,300));break;}
     }
-  }finally{conversing=false;voiceSession=false;pendingCapture=null;aiState='Ready';render();}
+  }finally{conversing=false;voiceSession=false;pendingCapture=null;aiState='Ready';render();
+    // Re-arm the wake word: listenOffline's own re-arm is skipped once the conversation has advanced speechRequest.
+    if(desiredWake&&voiceMode!=='wake')await resumeWake().catch(()=>undefined);}
 }
 function showCaption(text:string){const input=document.querySelector<HTMLInputElement>('#command-input');if(input){input.value=text;input.scrollLeft=input.scrollWidth;}}
 async function listenOffline(){
@@ -792,13 +795,13 @@ async function init() {
     await listen<{engine?:string;fallback?:boolean;reason?:string;fallbackReason?:string;error?:string}>('speech-output',event=>{if(event.payload.fallback)toast('Using the fast Windows voice.');else if(event.payload.error)toast('Speech failed: '+event.payload.error);});
     await listen<{type:string;session?:string;text?:string;reason?:string;level?:number;error?:string;confidence?:number;fallback?:boolean;language?:string;requestedLanguage?:string}>('voice',event=>{const value=event.payload;if(value.session!==activeVoiceId)return;if(value.type==='wake'){wakeRestarts=0;
       // JARVIS's own voice can sound like its name to the recognizer; while it speaks, accept only a confident match.
-      if(aiState==='Speaking'&&(value.confidence??1)<0.8){voiceLog('wake word ignored: own voice');return;}
+      if((aiState==='Speaking'||Date.now()-lastSpokeAt<2000)&&(value.confidence??1)<0.8){voiceLog('wake word ignored: own voice');return;}
       // Already recording the user: a second "JARVIS" must not cancel and restart the capture (that dropped requests).
       if(voiceMode==='ptt'){voiceLog('wake word ignored: already listening');return;}
       // Mid-conversation, "JARVIS" only stops the current reply; the conversation's own capture takes the next words
       // (starting a second capture here cancelled the first and lost the command, seen live with "Mute").
       if(conversing&&!/wake|morning|are you there/.test((value.text??'').toLowerCase())){voiceLog('wake word: interrupt reply');speechRequest++;replyEpoch++;void command('speech_stop').catch(()=>undefined);sound.stop('music',0);return;}
-      voiceLog('wake word heard');const wakeText=(value.text??'').toLowerCase();// Only an explicit wake-up phrase plays the cinematic sequence; "JARVIS, do X" must go straight to X (live test: the greeting talked over the command).
+      voiceLog('wake word heard: '+(value.text??'')+' ('+Math.round((value.confidence??0)*100)+'%)');const wakeText=(value.text??'').toLowerCase();// Only an explicit wake-up phrase plays the cinematic sequence; "JARVIS, do X" must go straight to X (live test: the greeting talked over the command).
       const fullWake=/wake|morning|are you there/.test(wakeText);lastInteraction=Date.now();speechRequest++;speechFallbackAttempted=false;activeVoiceId='';void run(async()=>{await command('speech_stop');voiceMode='';if(!desiredWake)return;if(fullWake)await cinematicWake();else if(page!=='hud'&&page!=='dashboard')go('hud');if(await shouldUseLocalWhisper()){await listenOffline();}else{activeVoiceId=await command<string>('voice_start',{mode:'ptt',language:state.settings.language});voiceMode='ptt';aiState='Listening';render();}await openOverviewFullscreen(()=>go('hud'));});return;}if(value.type==='ready'){aiState=voiceMode==='wake'?'Wake word armed':'Listening';if(value.fallback&&value.language)toast('Using installed '+value.language+' speech recognizer because '+value.requestedLanguage+' is unavailable.');render();}if(value.type==='level'){document.documentElement.style.setProperty('--audio-level',String(Math.min(1,(value.level??0)/100)));return;}if(value.type==='transcript'&&value.text){const transcript=value.text;activeVoiceId='';toast('I heard: '+transcript.slice(0,120));voiceMode='';void run(()=>handleVoiceTranscript(transcript));}if(value.type==='unrecognized'&&voiceMode==='ptt'){activeVoiceId='';voiceMode='';aiState='Ready';render();void run(async()=>{if(!speechFallbackAttempted&&state.settings.sttEngine==='sapi'){speechFallbackAttempted=true;try{const status=await command<{installed:boolean}>('offline_speech_status');if(shouldRetryWithWhisper(state.settings.sttEngine,status.installed,false)){toast('Windows speech could not recognize that. Offline Whisper is listening now; please repeat your request.');await listenOffline();return;}}catch{}}toast(value.reason??"I didn?t catch that. Check the microphone, then try one short sentence again.");try{await speak('I did not catch that. Please try again.');}catch(error){toast('Speech failed: '+String(error));}});}if(value.type==='error'){const wasListening=voiceMode==='ptt';document.documentElement.style.setProperty('--audio-level','0');voiceMode='';voiceFailure=value.error??'Speech recognition unavailable.';aiState='Ready';toast('Microphone error: '+voiceFailure);render();if(wasListening)void run(async()=>{try{await speak('I could not start listening. Please check the selected speech language and microphone.');}catch(error){toast('Speech failed: '+String(error));}});}if(value.type==='stopped'){document.documentElement.style.setProperty('--audio-level','0');let recovery=voiceStopRecovery(desiredWake,voiceMode as 'wake'|'ptt'|'');if(recovery==='attention'&&!voiceFailure&&wakeRestarts<3){wakeRestarts++;recovery='rearm';}voiceMode='';if(recovery==='rearm'&&!voiceFailure){aiState='Rearming wake word';render();window.setTimeout(()=>{if(!desiredWake||voiceMode)return;void run(async()=>{try{await resumeWake();}catch(error){voiceFailure=String(error);voiceMode='';aiState='Ready';render();toast('Wake-word listener failed: '+voiceFailure);}});},300);}else if(recovery!=='idle'){voiceFailure=voiceFailure||'The wake-word listener stopped unexpectedly.';toast('Wake-word listener stopped: '+voiceFailure);aiState='Ready';render();}else{aiState='Ready';render();}}if(value.type==='listening'){aiState='Listening';render();}});
     void refreshTelemetry();void run(refreshSecurity);void run(async()=>{tools=await command('tools_status');render();});
     void run(async()=>{const cache=await command<{weather:typeof weather;emails:typeof emails;emailsAt?:string;calendarAt?:string;connected:boolean}>('cached_integrations');weather=WeatherSchema.safeParse(cache.weather).data??null;emails=cache.emails??[];emailsAt=cache.emailsAt??'';calendarAt=cache.calendarAt??'';googleConnected=cache.connected;if(googleConnected)void googleCalendar().catch(()=>undefined);render();});
@@ -808,7 +811,9 @@ async function init() {
   function tickClock(){if(!document.hidden&&!nativeHidden)updateClock();setTimeout(tickClock,60000-Date.now()%60000+10);}setTimeout(tickClock,60000-Date.now()%60000+10);
   setInterval(()=>{void refreshTelemetry();if(native&&!document.hidden&&!nativeHidden&&Date.now()-lastSecurity>300000)void run(refreshSecurity);},5000);
   setInterval(()=>void run(reminders),15000);void run(reminders);
-  setInterval(()=>void proactive(),15000);setInterval(()=>void sampleWindow(),5000);setTimeout(()=>void greetOnline(),6000);
+  setInterval(()=>void proactive(),15000);
+  // Watchdog: the wake word must always come back after conversations, errors or a sleeping microphone.
+  setInterval(()=>{if(native&&desiredWake&&!voiceMode&&!conversing&&!waking&&aiState==='Ready')void resumeWake().catch(()=>undefined);},15000);setInterval(()=>void sampleWindow(),5000);setTimeout(()=>void greetOnline(),6000);
   // Minimised or in the tray: freeze all motion so JARVIS costs ~0% CPU in the background.
   document.addEventListener('visibilitychange',()=>document.body.classList.toggle('app-idle',document.hidden));
 }

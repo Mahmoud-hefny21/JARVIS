@@ -38,11 +38,14 @@ export async function audioName(slot: Slot): Promise<string | null> {
 const nativeCache = new Map<Slot, string | null>();
 async function nativeAsset(slot: Slot): Promise<string | null> {
   if (!native) return null;
-  if (!nativeCache.has(slot)) { try { nativeCache.set(slot, await command<string | null>('sound_asset', { slot })); } catch { nativeCache.set(slot, null); } }
+  // The app's CSP allows media only from blob: (not data:), so the file is turned into a Blob URL once.
+  if (!nativeCache.has(slot)) { try { const dataUrl = await command<string | null>('sound_asset', { slot }); nativeCache.set(slot, dataUrl ? toBlobUrl(dataUrl) : null); } catch (error) { lastError = 'sound_asset: ' + String(error); nativeCache.set(slot, null); } }
   return nativeCache.get(slot) ?? null;
 }
 
 const playing = new Map<Slot, HTMLAudioElement>();
+/** Why the last playback failed (shown in the activity log for diagnosis). */
+export let lastError = '';
 let ducked = false;
 function fade(el: HTMLAudioElement, to: number, ms: number) {
   const from = el.volume, start = performance.now();
@@ -59,15 +62,15 @@ export async function play(slot: Slot, opts: { fadeInMs?: number; loop?: boolean
   const el = new Audio(src); el.loop = !!opts.loop;
   const target = p.volume[slot] * ((slot === 'music' || slot === 'wake') && ducked ? 0.18 : 1);
   el.volume = opts.fadeInMs ? 0 : target; playing.set(slot, el);
-  el.onended = () => { if (el.src.startsWith('blob:')) URL.revokeObjectURL(el.src); if (playing.get(slot) === el) playing.delete(slot); if (slot === 'wake') document.documentElement.style.setProperty('--audio-level', '0'); };
-  try { await el.play(); } catch { playing.delete(slot); return false; }
+  el.onended = () => { if (v && el.src.startsWith('blob:')) URL.revokeObjectURL(el.src); if (playing.get(slot) === el) playing.delete(slot); if (slot === 'wake') document.documentElement.style.setProperty('--audio-level', '0'); };
+  try { await el.play(); } catch (error) { lastError = `play(${slot}): ` + String(error); playing.delete(slot); return false; }
   if (slot === 'wake') meter(el);
   if (opts.fadeInMs) void fade(el, target, opts.fadeInMs);
   return true;
 }
 export function stop(slot: Slot, fadeMs = 600) {
   const el = playing.get(slot); if (!el) return; playing.delete(slot);
-  const end = () => { el.pause(); if (el.src.startsWith('blob:')) URL.revokeObjectURL(el.src); };
+  const end = () => { el.pause(); if (![...nativeCache.values()].includes(el.src) && el.src.startsWith('blob:')) URL.revokeObjectURL(el.src); };
   if (fadeMs) void fade(el, 0, fadeMs).then(end); else end();
 }
 /** Lowers wake-up music while JARVIS speaks so the voice stays clear. */
@@ -102,3 +105,10 @@ function meter(el: HTMLAudioElement) {
   } catch { /* metering is decorative */ }
 }
 export function isPlaying(slot: Slot) { return playing.has(slot); }
+
+function toBlobUrl(dataUrl: string): string {
+  const [head, b64] = dataUrl.split(',', 2), mime = /data:([^;]+)/.exec(head)?.[1] ?? 'audio/wav';
+  const bin = atob(b64), bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return URL.createObjectURL(new Blob([bytes], { type: mime }));
+}

@@ -96,7 +96,9 @@ Last updated: 2026-11-21 (commit after `428e7cf`).
 | Low battery / sustained high CPU warnings | ✅ | |
 | Daily greeting with weather, next event, tasks | ✅ | |
 | Morning and evening briefings with project and business data | 🟡 | Briefing exists; no business data yet |
-| Owner's film wake-up sound (5.784 s trim of the supplied MP3) | ✅ | Kept on this PC only, never in the repo; Cinematic / Instant / Silent modes |
+| Owner's film wake-up sound (5.784 s trim of the supplied MP3) | ✅ | Live: sound starts 0.42 s after "wake up", greeting 1.32 s after the sound; kept on this PC only; Cinematic / Instant / Silent modes |
+| Wake word comes back after every conversation (watchdog) | ✅ | Live-tested after the 60 s attention window |
+| "Wake up, JARVIS" spoken as one phrase from cold | 🟡 | The Windows recognizer often hears only "JARVIS"; "JARVIS… wake up" works reliably |
 | Build-failed / website-down alerts | ⬜ | Needs project and website monitoring |
 
 ## 7. Security

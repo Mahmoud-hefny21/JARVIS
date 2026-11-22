@@ -47,7 +47,8 @@ public class JarvisVoice {
       engine.SpeechHypothesized += (s,e) => {
         if(caption) { Emit(new {type="partial",text=e.Result.Text}); return; }
         // React while the keyword is still being heard instead of waiting for trailing silence.
-        if(wake && !woke && e.Result.Grammar==keyword && e.Result.Confidence >= 0.45) { woke = true; Emit(new {type="wake",text=e.Result.Text,confidence=e.Result.Confidence}); ended.Set(); }
+        // Fire early only once the guess ends in "JARVIS", so "wake up JARVIS" arrives whole and plays the cinematic wake.
+        if(wake && !woke && e.Result.Grammar==keyword && e.Result.Confidence >= 0.45 && e.Result.Text.EndsWith("JARVIS", StringComparison.OrdinalIgnoreCase)) { woke = true; Emit(new {type="wake",text=e.Result.Text,confidence=e.Result.Confidence}); ended.Set(); }
       };
       engine.SpeechRecognitionRejected += (s,e) => {
         if(caption) return;
@@ -64,7 +65,8 @@ public class JarvisVoice {
         }
         if(wake && e.Result.Grammar==keyword) {
           // A single short keyword attracts false matches from noise and JARVIS's own voice; require a confident hit.
-          if(e.Result.Confidence < 0.5 || woke) return;
+          // Multi-word phrases ("wake up JARVIS") are far harder to trigger by accident, so they may score lower.
+          if(woke || e.Result.Confidence < (e.Result.Text.Contains(" ") ? 0.35 : 0.5)) return;
           woke = true; Emit(new {type="wake",text=e.Result.Text,confidence=e.Result.Confidence});
           ended.Set(); return;
         } else {
