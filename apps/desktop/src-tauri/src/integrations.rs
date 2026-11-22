@@ -559,6 +559,63 @@ pub fn weather(app: &AppHandle) -> Result<Value> {
         .set_value("weatherCache", &value)?;
     Ok(value)
 }
+/// Free, keyless Wikipedia lookup for the on-screen display: best-matching article summary plus its
+/// image as a data URI (the page CSP only allows local and data: images).
+pub fn wiki_lookup(query: &str, lang: &str) -> Result<Value> {
+    let query = query.trim();
+    if query.is_empty() || query.chars().count() > 200 {
+        return Err("Say what you want to see, sir.".into());
+    }
+    let lang = if lang == "ar" { "ar" } else { "en" };
+    let agent = "JARVIS-Personal/0.1 (local desktop assistant)";
+    let http = client()?;
+    let found = read_json(
+        http.get(format!("https://{lang}.wikipedia.org/w/rest.php/v1/search/page"))
+            .header("User-Agent", agent)
+            .query(&[("q", query), ("limit", "1")])
+            .send()
+            .map_err(|_| "Encyclopedia unavailable — check the internet connection.")?,
+    )?;
+    let Some(key) = found["pages"][0]["key"].as_str() else {
+        return Ok(Value::Null);
+    };
+    let summary = read_json(
+        http.get(format!(
+            "https://{lang}.wikipedia.org/api/rest_v1/page/summary/{}",
+            key.replace('/', "%2F")
+        ))
+        .header("User-Agent", agent)
+        .send()
+        .map_err(|_| "Encyclopedia unavailable — check the internet connection.")?,
+    )?;
+    let image = summary["thumbnail"]["source"]
+        .as_str()
+        .filter(|u| {
+            u.starts_with("https://upload.wikimedia.org/") || u.starts_with("https://thumb.wikimedia.org/")
+        })
+        .and_then(|url| {
+            let response = http.get(url).header("User-Agent", agent).send().ok()?;
+            if !response.status().is_success() {
+                return None;
+            }
+            let mime = response
+                .headers()
+                .get("content-type")
+                .and_then(|v| v.to_str().ok())
+                .filter(|m| m.starts_with("image/"))?
+                .to_string();
+            let mut bytes = Vec::new();
+            response.take(4_000_000).read_to_end(&mut bytes).ok()?;
+            Some(format!("data:{mime};base64,{}", STANDARD.encode(bytes)))
+        });
+    Ok(json!({
+        "title": summary["title"],
+        "description": summary["description"],
+        "extract": summary["extract"],
+        "image": image,
+        "url": summary["content_urls"]["desktop"]["page"],
+    }))
+}
 pub fn google_connect(app: &AppHandle) -> Result<()> {
     let config = settings(app)?;
     let client_id = config["googleClientId"]

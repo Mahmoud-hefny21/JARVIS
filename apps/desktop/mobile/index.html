@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="JARVIS">
+<meta name="theme-color" content="#030b15">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icon.png">
+<title>J.A.R.V.I.S.</title>
+<style>
+/* The core is a copy of the PC Workshop core (docs/design/core-reference.png): same geometry, colours and speeds. */
+:root{--cyan:#32d8ff;--gold:#ffc76a;color-scheme:dark}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;background:#030b15;color:#e5f3fa;font-family:-apple-system,"Segoe UI",Arial,sans-serif;font-size:15px;overflow:hidden}
+body{display:flex;flex-direction:column;padding:env(safe-area-inset-top) 16px env(safe-area-inset-bottom);background:radial-gradient(ellipse at 50% 38%,#0a2232 0,#04101b 55%,#02070c 100%)}
+.stage{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;transition:justify-content .4s}
+.core-wrap{width:min(78vw,360px);transition:width .5s cubic-bezier(.2,.8,.2,1)}
+body.has-card .stage{justify-content:flex-start;padding-top:10px}
+body.has-card .core-wrap{width:min(38vw,170px)}
+@keyframes orbit{to{transform:rotate(360deg)}}
+.ws-core{position:relative;width:100%;aspect-ratio:1;display:grid;place-items:center;cursor:pointer}
+.ws-ring{position:absolute;inset:0;border-radius:50%;border:2px solid transparent;will-change:transform}
+.ws-ring.r1{inset:4%;border-top-color:#35d6ff;border-bottom-color:#35d6ff55;animation:orbit 14s linear infinite}
+.ws-ring.r3{inset:18%;border-left-color:#5be7ff;border-right-color:#5be7ff;border-width:3px;animation:orbit 9s linear infinite}
+.ws-heart{width:38%;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;transform:scale(calc(1 + var(--lvl,0) * .35));transition:transform .08s linear;background:radial-gradient(circle,#d8fbff 0,#5fe3ff 18%,#0a6d93 46%,#03202f 70%);box-shadow:0 0 50px #2fd0ff88,0 0 120px #18a8d855;position:relative;z-index:1}
+.ws-heart span{font-size:clamp(7px,2.6vw,12px);letter-spacing:.35em;color:#022231;font-weight:700;padding-left:.35em}
+.ws-dial{position:absolute;inset:-6%;width:112%;height:112%;overflow:visible}
+.ws-ticks line{stroke:#1f86a8;stroke-width:1.2}.ws-ticks line.long{stroke:#5be7ff;stroke-width:2}
+.ws-ticks{transform-origin:200px 200px;animation:orbit 120s linear infinite}
+.ws-seg{fill:none;transform-origin:200px 200px}
+.ws-seg.s1{stroke:#35d6ff;stroke-width:5;stroke-dasharray:46 18 8 18;opacity:.75;animation:orbit 26s linear infinite reverse}
+.ws-seg.s2{stroke:#1c9cc6;stroke-width:2;stroke-dasharray:120 40 6 40;animation:orbit 18s linear infinite}
+.ws-draw{fill:none;stroke:#7ff0ff;stroke-width:1.5;stroke-dasharray:741;opacity:.6;animation:ws-draw 1.6s cubic-bezier(.6,0,.2,1) both}
+@keyframes ws-draw{from{stroke-dashoffset:741}to{stroke-dashoffset:0}}
+.ws-legend{transform-origin:200px 200px;animation:orbit 60s linear infinite reverse}
+.ws-legend text{font-size:10.5px;letter-spacing:4px;fill:#57c9e8;font-family:"Segoe UI",-apple-system,sans-serif}
+.ws-radar{position:absolute;inset:14%;border-radius:50%;background:conic-gradient(from 0deg,#35d6ff00 0deg,#35d6ff00 300deg,#35d6ff38 352deg,#9ff4ff88 360deg);animation:orbit 4.5s linear infinite;opacity:.55;mix-blend-mode:screen}
+.ws-fx{position:absolute;inset:-12%;width:124%;height:124%;pointer-events:none}
+.ws-dial,.ws-ring{animation-name:orbit}
+.boot .ws-dial,.boot .ws-ring{animation:ws-expand 1.1s cubic-bezier(.2,.8,.2,1) both}
+.boot .ws-heart{animation:ws-ignite 1.4s ease-out both}
+@keyframes ws-expand{from{transform:scale(.4);opacity:0}to{transform:none;opacity:1}}
+@keyframes ws-ignite{0%{transform:scale(.2);opacity:0;filter:brightness(3)}60%{opacity:1}100%{transform:none;filter:none}}
+/* Working: gold fades in smoothly, rings keep their calm speed, one line says what's happening. */
+.ws-ring.r1,.ws-ring.r3,.ws-seg.s1,.ws-ticks line.long{transition:border-color .8s ease,stroke .8s ease}
+body.working .ws-ring.r1{border-top-color:var(--gold)}body.working .ws-ring.r3{border-left-color:var(--gold);border-right-color:var(--gold)}
+body.working .ws-seg.s1,body.working .ws-ticks line.long{stroke:var(--gold)}
+.doing{min-height:18px;font-size:12px;letter-spacing:.32em;text-transform:uppercase;color:#7fd8f2;text-align:center;transition:color .8s ease,opacity .6s ease}
+body.working .doing{color:var(--gold)}
+.reply{max-width:560px;width:100%;text-align:center;font-size:16px;line-height:1.5;color:#dff6ff;max-height:24vh;overflow:auto}
+.reply[dir="rtl"],.reply:lang(ar){font-family:"Geeza Pro","SF Arabic",sans-serif}
+.card{display:none;width:100%;max-width:620px;flex:1;min-height:0;overflow:auto;border:1px solid #2bc6ef;border-radius:10px;background:linear-gradient(180deg,#05192af5,#020d16f8);padding:12px 14px 16px;box-shadow:0 0 30px #18c8f030}
+body.has-card .card{display:block}
+body.has-card .reply{max-height:12vh;font-size:14.5px}
+.card h2{margin:0 0 8px;font-size:16px;color:#7cf3ff;letter-spacing:.04em}
+.card h3{margin:12px 0 4px;font-size:14.5px;color:#7cf3ff}
+.card p{margin:6px 0}.card ul,.card ol{margin:6px 0 6px 18px;padding:0}
+.card table{width:100%;border-collapse:collapse;margin:8px 0}.card th,.card td{text-align:start;padding:6px 8px;border-bottom:1px solid #12485e}.card th{color:#7cf3ff}
+.card img{max-width:100%;border-radius:6px}
+.card .dsp-hero{display:grid;gap:10px}.card .dsp-list{list-style:none;margin:0;padding:0}.card .dsp-list li{padding:8px 0;border-bottom:1px solid #0f3a4c}.card .dsp-list span{display:block;color:#8fc7d6;font-size:13px}
+.card .dsp-big{font-size:44px;color:#7cf3ff}
+.closecard{float:right;border:1px solid #1f6f88;background:#061e2b;color:#9eefff;border-radius:50%;width:28px;height:28px;font-size:16px}
+form{display:flex;gap:10px;align-items:center;padding:10px 0 12px}
+input{flex:1;min-width:0;font:inherit;font-size:16px;color:#e5f3fa;background:#06151f;border:1px solid #1f6f88;border-radius:999px;padding:11px 16px;outline:none}
+input:focus{border-color:#5be7ff}
+button.send{width:44px;height:44px;border-radius:50%;border:0;background:#32d8ff;color:#03202c;font-size:18px;font-weight:700}
+button.send:disabled{opacity:.5}
+@media (prefers-reduced-motion:reduce){.ws-dial *,.ws-ring,.ws-radar{animation:none!important}}
+</style>
+</head>
+<body class="boot">
+<main class="stage">
+  <div class="core-wrap"><div class="ws-core" id="core" role="button" aria-label="Talk to JARVIS"></div></div>
+  <div class="doing" id="doing">Ready</div>
+  <div class="reply" id="reply" dir="auto">Good to see you, sir.</div>
+  <section class="card" id="card" aria-live="polite"><button class="closecard" id="closecard" aria-label="Close card">×</button><div id="cardbody" dir="auto"></div></section>
+</main>
+<form id="ask"><input id="text" autocomplete="off" enterkeyhint="send" placeholder="Or type to JARVIS…" aria-label="Message to JARVIS"><button class="send" id="send" aria-label="Send">↑</button></form>
+<script>
+// Same dial as the PC core (coreGraphic in apps/desktop/src/main.ts).
+const ticks=Array.from({length:120},(_,i)=>{const a=i*3*Math.PI/180,long=i%10===0,r1=long?178:186;return `<line x1="${(200+r1*Math.cos(a)).toFixed(1)}" y1="${(200+r1*Math.sin(a)).toFixed(1)}" x2="${(200+194*Math.cos(a)).toFixed(1)}" y2="${(200+194*Math.sin(a)).toFixed(1)}"${long?' class="long"':''}/>`;}).join('');
+document.getElementById('core').innerHTML=`<svg class="ws-dial" viewBox="0 0 400 400"><defs><path id="ws-legend" d="M200,200 m-150,0 a150,150 0 1,1 300,0 a150,150 0 1,1 -300,0"/></defs>
+<g class="ws-ticks">${ticks}</g><circle class="ws-seg s1" cx="200" cy="200" r="166"/><circle class="ws-seg s2" cx="200" cy="200" r="132"/><circle class="ws-draw" cx="200" cy="200" r="118"/>
+<g class="ws-legend"><text><textPath href="#ws-legend">J.A.R.V.I.S. · ALL SYSTEMS ONLINE · PERSONAL INTELLIGENCE · VOICE LINK ACTIVE · LOCAL CORE ·</textPath></text></g></svg>
+<canvas class="ws-fx" width="520" height="520"></canvas><i class="ws-radar"></i><i class="ws-ring r1"></i><i class="ws-ring r3"></i><div class="ws-heart"><span>J.A.R.V.I.S.</span></div>`;
+setTimeout(()=>document.body.classList.remove('boot'),1600);
+// Orbiting particles, as on the PC.
+const c=document.querySelector('.ws-fx'),g=c.getContext('2d'),W=c.width,C=W/2;
+const parts=Array.from({length:28},(_,i)=>({a:i/28*Math.PI*2,r:.58+Math.random()*.4,s:(Math.random()*.4+.15)*(i%2?1:-1),z:Math.random()}));
+let last=0;function fx(t){requestAnimationFrame(fx);if(document.hidden||t-last<50)return;const dt=Math.min(.1,(t-last)/1000);last=t;g.clearRect(0,0,W,W);
+  const hue=document.body.classList.contains('working')?'255,199,106':'91,231,255';
+  for(const p of parts){p.a+=p.s*dt;const r=p.r*C*.92;g.fillStyle=`rgba(${hue},${.25+p.z*.55})`;g.beginPath();g.arc(C+Math.cos(p.a)*r,C+Math.sin(p.a)*r*.92,.8+p.z*1.8,0,Math.PI*2);g.fill();}
+  g.lineWidth=1.6;g.strokeStyle=`rgba(${hue},.35)`;g.beginPath();for(let i=0;i<=120;i++){const a=i/120*Math.PI*2,rr=C*.42+C*.012*(1+.45*Math.sin(a*3+t/520)),x=C+Math.cos(a)*rr,y=C+Math.sin(a)*rr;i?g.lineTo(x,y):g.moveTo(x,y);}g.stroke();}
+if(!matchMedia('(prefers-reduced-motion: reduce)').matches)requestAnimationFrame(fx);
+
+const form=document.getElementById('ask'),input=document.getElementById('text'),send=document.getElementById('send'),doing=document.getElementById('doing'),reply=document.getElementById('reply'),card=document.getElementById('cardbody'),coreEl=document.getElementById('core');
+const guess=t=>/^(?:open|eftah|افتح)/i.test(t)?'Opening…':/^(?:show|e3rdli|warini|وريني|اعرض|display)/i.test(t)?'Pulling it up…':/^(?:add task|remind|fakkarny|ftakarny|ذكرني)/i.test(t)?'Saving it…':/^(?:research|search|look up|dawar|دور)/i.test(t)?'Searching…':'Thinking…';
+document.getElementById('closecard').onclick=()=>document.body.classList.remove('has-card');
+let phase='idle';
+function setPhase(p,label){phase=p;doing.textContent=label;document.body.classList.toggle('working',p==='thinking');}
+setPhase('idle','Tap the core to talk');
+
+// One round trip: question → JARVIS on the laptop → reply (and card), then JARVIS's voice when talking.
+async function ask(text,voice){setPhase('thinking',guess(text));reply.textContent='“'+text+'”';
+  try{const r=await fetch('/api/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,voice})});
+    if(!r.ok)throw new Error(r.status===403?'This JARVIS answers its owner only.':'JARVIS could not answer ('+r.status+').');
+    const data=await r.json();const said=String(data.reply||'Done, sir.').replace(/[*#`]+/g,'');reply.textContent=said;
+    if(data.card){card.innerHTML=data.card;document.body.classList.add('has-card');card.scrollTop=0;}
+    if(convo||voice)await speakText(data.spoken||said);
+  }catch(err){reply.textContent=navigator.onLine?String(err.message||err)+' Is the laptop on with Tailscale connected?':'No internet on the phone, sir.';}
+  finally{if(convo)listen();else setPhase('idle','Tap the core to talk');}}
+
+// JARVIS's voice: the laptop renders the same voice it uses on the PC; the phone plays it.
+let ctx=null,voiceSrc=null;
+function audio(){if(!ctx)ctx=new (window.AudioContext||window.webkitAudioContext)();ctx.resume();return ctx;}
+async function speakText(text){if(!text)return;try{setPhase('speaking','Speaking…');const r=await fetch('/api/speak',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});if(!r.ok)return;
+  const buf=await audio().decodeAudioData(await r.arrayBuffer());await new Promise(done=>{voiceSrc=ctx.createBufferSource();voiceSrc.buffer=buf;voiceSrc.connect(ctx.destination);voiceSrc.onended=done;voiceSrc.start();});}catch{}finally{voiceSrc=null;}}
+function stopVoice(){try{voiceSrc?.stop();}catch{}voiceSrc=null;}
+
+// Conversation: after one tap (an iPhone rule), JARVIS listens, hears when you start and stop, answers, and listens again.
+let convo=false,stream=null,analyser=null,samples=null,rec=null,chunks=[],floor=.008,voicedSince=0,lastVoice=0,clipStart=0;
+const mime=['audio/mp4','audio/webm;codecs=opus','audio/webm'].find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported(t))||'';
+async function startConvo(){try{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});}
+  catch{reply.textContent='JARVIS needs the microphone, sir. Allow it when the iPhone asks, or in Settings → Safari → Microphone.';return;}
+  const a=audio();analyser=a.createAnalyser();analyser.fftSize=1024;samples=new Float32Array(analyser.fftSize);a.createMediaStreamSource(stream).connect(analyser);
+  convo=true;listen();}
+function stopConvo(){convo=false;if(rec&&rec.state!=='inactive'){rec.onstop=null;rec.stop();}stream?.getTracks().forEach(t=>t.stop());stream=null;stopVoice();coreEl.style.removeProperty('--lvl');setPhase('idle','Tap the core to talk');}
+function level(){analyser.getFloatTimeDomainData(samples);let s=0;for(const v of samples)s+=v*v;return Math.sqrt(s/samples.length);}
+function listen(){if(!convo)return;setPhase('listening','Listening…');voicedSince=0;requestAnimationFrame(watch);}
+function watch(now){if(!convo||(phase!=='listening'&&phase!=='hearing'))return;const l=level();coreEl.style.setProperty('--lvl',Math.min(1,l*12).toFixed(3));
+  if(phase==='listening'){floor=floor*.97+Math.min(l,.05)*.03;if(l>Math.max(.018,floor*3)){voicedSince=voicedSince||now;if(now-voicedSince>120)beginClip(now);}else voicedSince=0;}
+  else{if(l>Math.max(.012,floor*2.2))lastVoice=now;if((now-lastVoice>900&&now-clipStart>500)||now-clipStart>15000){endClip();return;}}
+  requestAnimationFrame(watch);}
+function beginClip(now){chunks=[];rec=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};rec.start();clipStart=lastVoice=now;setPhase('hearing','Listening…');}
+function endClip(){setPhase('thinking','Understanding…');coreEl.style.removeProperty('--lvl');rec.onstop=async()=>{const blob=new Blob(chunks,{type:rec.mimeType||mime||'audio/mp4'});if(blob.size<3000){listen();return;}
+  try{const r=await fetch('/api/listen',{method:'POST',headers:{'Content-Type':blob.type},body:blob});const data=await r.json();const text=String(data.text||'').trim();
+    if(data.error){reply.textContent=data.error.includes('not configured')?'Speech needs the Groq key in JARVIS Settings, sir.':'I couldn’t hear that clearly, sir.';listen();return;}
+    if(text.replace(/[^\p{L}\p{N}]/gu,'').length<2){listen();return;}await ask(text,true);}catch{reply.textContent='The laptop didn’t answer, sir.';listen();}};rec.stop();}
+coreEl.addEventListener('click',()=>{if(phase==='speaking'){stopVoice();return;}if(convo&&(phase==='listening'||phase==='hearing')){stopConvo();return;}if(!convo)startConvo();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&convo)stopConvo();});
+
+form.addEventListener('submit',e=>{e.preventDefault();const text=input.value.trim();if(!text||phase==='thinking')return;input.value='';input.blur();audio();if(rec&&rec.state!=='inactive'){rec.onstop=null;rec.stop();}ask(text,false);});
+// Auto-update: the app is served by the laptop, so a new JARVIS build reaches the phone by itself.
+// If the page changed while the app is open, reload quietly when it isn't busy.
+let shipped='';async function checkVersion(){if(document.body.classList.contains('working'))return;try{const v=(await (await fetch('/api/version',{cache:'no-store'})).json()).version;if(shipped&&v&&v!==shipped)location.reload();shipped=v||shipped;}catch{}}
+checkVersion();setInterval(checkVersion,60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkVersion();});
+</script>
+</body>
+</html>

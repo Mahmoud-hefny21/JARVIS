@@ -79,7 +79,7 @@ body.app-idle *,body.app-idle *::before,body.app-idle *::after{animation-play-st
 .overview-page .globe{filter:none}
 /* Proactive heads-up: JARVIS speaking up on its own reads as a priority call-out, not a reply. */
 .hud-reply.alert{border-color:#ffb547;box-shadow:0 0 0 1px #4a3208 inset,0 0 44px #ffb54733,0 20px 60px #000a}
-.hud-reply.alert::after{content:"PRIORITY · J.A.R.V.I.S.";color:#ffc76a}
+.hud-reply.alert::after{content:"PRIORITY Â· J.A.R.V.I.S.";color:#ffc76a}
 .hud-reply.alert .hud-you{display:none}
 .hud-reply.alert .hud-jarvis{color:#fff3df;text-shadow:0 0 12px #ffb54740}
 .hud-reply.alert{pointer-events:none}
@@ -99,12 +99,12 @@ body.workshop-page #content{padding:0;overflow:hidden}
 .ws-heart span{font-size:clamp(9px,1.4vh,13px);letter-spacing:.35em;color:#022231;font-weight:700;padding-left:.35em}
 .ws-state{grid-column:2;grid-row:3;align-self:end;margin:0 0 4px;font-size:12px;letter-spacing:.32em;text-transform:uppercase;color:#7fd8f2}
 /* Core states follow the conversation */
-body[data-ai="listening"] .ws-ring.r1{animation-duration:3s}
-body[data-ai="listening"] .ws-heart{box-shadow:0 0 70px #2fd0ffbb,0 0 160px #18a8d877}
+/* Calm while the owner talks: no speed-ups, only a gentle glow and slow breathing. */
+body[data-ai="listening"] .ws-heart{box-shadow:0 0 50px #2fd0ff88,0 0 120px #18a8d855;transition:box-shadow .8s ease}
 body[data-ai="processing"] .ws-ring.r1,body[data-ai="processing"] .ws-ring.r3{animation-duration:1.2s;border-top-color:#ffc76a;border-left-color:#ffc76a;border-right-color:#ffc76a}
 body[data-ai="processing"] .ws-state{color:#ffc76a}
-body[data-ai="speaking"] .ws-heart{animation:ws-speak .5s ease-in-out infinite alternate}
-@keyframes ws-speak{to{transform:scale(1.12);box-shadow:0 0 80px #5be7ffcc,0 0 180px #18a8d888}}
+body[data-ai="speaking"] .ws-heart{animation:ws-speak 2.4s ease-in-out infinite alternate}
+@keyframes ws-speak{to{transform:scale(1.03);box-shadow:0 0 60px #5be7ff99,0 0 140px #18a8d866}}
 /* Pods float around the core */
 .ws-pods{display:contents}
 .ws-pod{width:min(340px,100%);padding:14px 18px 16px;border:1px solid #1b6582;border-radius:4px;background:linear-gradient(160deg,#06202ecc,#031119e6);box-shadow:inset 0 0 0 1px #0a3446,0 0 30px #0ab8ef18;clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px));animation:alert-in .5s cubic-bezier(.2,.8,.2,1) both}
@@ -113,7 +113,7 @@ body[data-ai="speaking"] .ws-heart{animation:ws-speak .5s ease-in-out infinite a
 .ws-pod span{display:block;font-size:13px;color:#8fc3d6;margin-top:4px}
 .ws-pod ul{margin:6px 0 0;padding:0;list-style:none;font-size:13px;color:#a9d6e6}
 .ws-pod li{padding:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ws-pod li::before{content:"▸ ";color:#35d6ff}
+.ws-pod li::before{content:"â–¸ ";color:#35d6ff}
 .ws-pod.hot{border-color:#ffb547;box-shadow:inset 0 0 0 1px #4a3208,0 0 34px #ffb54733}
 .ws-pod.hot strong{color:#fff3df}
 .ws-next{grid-column:1;grid-row:1;justify-self:end}
@@ -150,7 +150,7 @@ body.reduced-motion .ws-ring,body.reduced-motion .ws-heart,body.reduced-motion .
 body[data-ai="processing"] .ws-seg.s1,body[data-ai="processing"] .ws-ticks line.long{stroke:#ffc76a}
 body[data-ai="processing"] .ws-seg.s1{animation-duration:3s}
 body[data-ai="processing"] .ws-radar{background:conic-gradient(from 0deg,#ffc76a00 300deg,#ffc76a40 352deg,#ffe2a888 360deg);animation-duration:1.4s}
-body[data-ai="listening"] .ws-radar{animation-duration:2s;opacity:.8}
+
 /* Pods: corner brackets and a hologram scan line */
 .ws-pod{position:relative}
 .ws-pod::before,.ws-pod::after{content:"";position:absolute;width:12px;height:12px;border-color:#5be7ff;border-style:solid;pointer-events:none}
@@ -176,7 +176,7 @@ body:not(.ws-booted) .ws-comms{animation-delay:1.35s,1.35s}
 body.reduced-motion .ws-dial *,body.reduced-motion .ws-radar,body.app-idle .ws-radar{animation:none!important}
 body.low-power .ws-radar,body.low-power .ws-legend{display:none}
 .workshop .ws-state{top:calc(50% + min(21vh,50%) + 34px)}
-/* "Show me…": the asked-for hologram steps forward */
+/* "Show meâ€¦": the asked-for hologram steps forward */
 .ws-pod.focus{border-color:#7ff0ff;box-shadow:inset 0 0 0 1px #1f7f9e,0 0 60px #35d6ff66;transform:scale(1.06);transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s;animation:ws-focus 1.2s ease-in-out 2}
 @keyframes ws-focus{50%{box-shadow:inset 0 0 0 1px #1f7f9e,0 0 90px #5be7ffaa}}
 
@@ -188,7 +188,7 @@ body[data-ai="executing"] .ws-state{color:#7ff0c8}
 body[data-ai="error"] .ws-heart{background:radial-gradient(circle,#fff1d6 0,#ffc76a 20%,#7a4a0e 50%,#201203 72%);box-shadow:0 0 40px #ffb54766}
 body[data-ai="error"] .ws-state{color:#ffc76a}
 body[data-ai="offline"] .ws-core{filter:saturate(.3) brightness(.6)}
-body[data-ai="offline"] .ws-state::after{content:" · OFFLINE"}
+body[data-ai="offline"] .ws-state::after{content:" Â· OFFLINE"}
 
 /* ===== Workshop v2: six live pods, gauges, parallax ===== */
 .ws-next{grid-column:1;grid-row:1}.ws-activity{grid-column:1;grid-row:2;justify-self:end}.ws-tasks{grid-column:1;grid-row:3}
@@ -282,3 +282,44 @@ body.workshop-page .topbar{border-bottom-color:transparent}
 .ws-activity{justify-self:end}.ws-health{justify-self:start}
 .ws-next,.ws-tasks{justify-self:end}.ws-system,.ws-comms{justify-self:start}
 @media (max-height:820px){.workshop{row-gap:18px}}
+
+/* Sign in with Google: mark and label centred on one line, aligned with the other settings button rows. */
+.google-row{align-items:center;flex-wrap:wrap;gap:12px}
+.google-button{display:inline-flex;align-items:center;justify-content:center;gap:10px;line-height:1}
+.google-button .google-mark{width:18px;height:18px;flex:none;background:#fff;border-radius:50%;padding:2px;box-sizing:content-box}
+
+/* On-screen display card ("show me ...") */
+.display-card{position:fixed;left:50%;top:50%;transform:translate(-50%,-52%);z-index:45;width:min(880px,calc(100vw - 32px));max-height:min(72vh,760px);display:flex;flex-direction:column;border:1px solid #2bc6ef;border-radius:8px;background:linear-gradient(180deg,#05192af5,#020d16f8);box-shadow:0 0 0 1px #0a3a4d inset,0 0 50px #18c8f030,0 24px 60px #000a;color:#d8f6ff;backdrop-filter:blur(6px)}
+.display-card[hidden]{display:none}
+.display-card.enter{animation:dsp-in .45s ease-out}
+@keyframes dsp-in{from{opacity:0;transform:translate(-50%,-49%)}to{opacity:1;transform:translate(-50%,-52%)}}
+.display-card header{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid #12485e}
+.display-card h2{flex:1;margin:0;font-size:18px;letter-spacing:.04em;color:#7cf3ff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dsp-tag{font-size:10px;letter-spacing:.18em;color:#0b1a24;background:#5be7ff;border-radius:3px;padding:3px 7px}
+.dsp-close{width:30px;height:30px;border:1px solid #1f6f88;border-radius:50%;background:#061e2b;color:#9eefff;font-size:18px;line-height:1;cursor:pointer}
+.dsp-close:hover{background:#0b3346}
+.dsp-body{overflow:auto;padding:16px 20px 20px;font-size:14.5px;line-height:1.55}
+.dsp-body h3{margin:14px 0 6px;font-size:15px;color:#7cf3ff;letter-spacing:.03em}
+.dsp-body p{margin:6px 0}
+.dsp-body ul,.dsp-body ol{margin:6px 0 6px 20px;padding:0}
+.dsp-body li{margin:3px 0}
+.dsp-body code{background:#0b2b3a;border-radius:3px;padding:1px 5px}
+.dsp-body table{width:100%;border-collapse:collapse;margin:10px 0}
+.dsp-body th,.dsp-body td{text-align:start;padding:7px 10px;border-bottom:1px solid #12485e}
+.dsp-body th{color:#7cf3ff;font-weight:600}
+.dsp-hero{display:flex;gap:18px;align-items:flex-start;padding-bottom:12px;margin-bottom:4px;border-bottom:1px solid #12485e}
+.dsp-hero img{width:210px;max-height:240px;object-fit:cover;border-radius:6px;border:1px solid #1f6f88;flex:none}
+.dsp-hero h3{margin-top:0;font-size:20px}
+.dsp-sub{color:#8fc7d6;font-style:italic}
+.dsp-source{font-size:11.5px;color:#6b9fb0}
+.dsp-list{list-style:none;margin:0!important;padding:0!important}
+.dsp-list li{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;padding:9px 2px;border-bottom:1px solid #0f3a4c}
+.dsp-list li span{color:#8fc7d6;font-size:13px}
+.dsp-list li p{flex-basis:100%;color:#a9cfdb;font-size:13px}
+.dsp-empty{color:#8fc7d6}
+.dsp-big{font-size:56px;font-weight:300;color:#7cf3ff}
+.dsp-loading{display:flex;align-items:center;gap:12px;color:#8fc7d6;padding:24px 4px}
+.display-card[dir="rtl"],.dsp-body:lang(ar){direction:rtl}
+@media (max-width:640px){.dsp-hero{flex-direction:column}.dsp-hero img{width:100%}}
+@media (prefers-reduced-motion:reduce){.display-card.enter{animation:none}}
+

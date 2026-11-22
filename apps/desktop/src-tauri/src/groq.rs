@@ -48,19 +48,29 @@ pub fn warm(app: &tauri::AppHandle) {
 }
 
 pub fn transcribe(app: &tauri::AppHandle, wav: &Path, language: &str) -> Result<String> {
-    let key = key(app).ok_or("Groq key not configured")?;
     let audio = std::fs::read(wav).map_err(|_| "Cannot read captured audio")?;
+    transcribe_audio(app, &audio, "speech.wav", "audio/wav", Some(language))
+}
+
+/// Any recorded clip (WAV from the PC, M4A/WebM from the phone). Without a language Whisper detects it,
+/// which suits mixed Egyptian Arabic and English.
+pub fn transcribe_audio(app: &tauri::AppHandle, audio: &[u8], filename: &str, mime: &str, language: Option<&str>) -> Result<String> {
+    let key = key(app).ok_or("Groq key not configured")?;
     let boundary = format!("jarvis{}", uuid::Uuid::new_v4().simple());
     let mut body = Vec::with_capacity(audio.len() + 1024);
-    for (name, value) in [("model", STT_MODEL), ("language", language), ("response_format", "json"), ("temperature", "0"), ("prompt", VOCABULARY)] {
+    let mut fields = vec![("model", STT_MODEL), ("response_format", "json"), ("temperature", "0"), ("prompt", VOCABULARY)];
+    if let Some(language) = language.filter(|l| !l.is_empty()) {
+        fields.push(("language", language));
+    }
+    for (name, value) in fields {
         body.extend_from_slice(
             format!("--{boundary}\r\nContent-Disposition: form-data; name=\"{name}\"\r\n\r\n{value}\r\n").as_bytes(),
         );
     }
     body.extend_from_slice(
-        format!("--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"speech.wav\"\r\nContent-Type: audio/wav\r\n\r\n").as_bytes(),
+        format!("--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"{filename}\"\r\nContent-Type: {mime}\r\n\r\n").as_bytes(),
     );
-    body.extend_from_slice(&audio);
+    body.extend_from_slice(audio);
     body.extend_from_slice(format!("\r\n--{boundary}--\r\n").as_bytes());
     let response = client(20)?
         .post("https://api.groq.com/openai/v1/audio/transcriptions")

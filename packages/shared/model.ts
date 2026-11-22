@@ -142,6 +142,7 @@ export function localIntent(input: string): { action: string; text?: string } | 
   const done = t.match(/^(?:complete|finish|finished|done with|mark|tick off|check off|i (?:did|finished|completed))\s+(?:the\s+|my\s+)?(?:task\s+)?(.*?)(?:\s+(?:task|as done|as complete|done))*$/) || t.match(/^(?:خلصت|خلّصت|عملت)\s+(.*)$/u);
   if (done && done[1].trim()) return { action: 'task-done', text: done[1].trim() };
   // "Mute" / "stop talking": silence immediately, wherever it is heard.
+  if (/^(?:un-?mute|unmute yourself|you can talk|talk again|speak again|etkalem|itkalam|اتكلم)$/u.test(t)) return { action: 'unmute' };
   if (/^(?:mute|be quiet|quiet|shut up|silence|stop talking|stop|enough|hush|اسكت|بس اسكت|خلاص اسكت|uskut|eskot)$/u.test(t)) return { action: 'mute' };
   // "Open my WhatsApp Web (in Chrome)": well-known sites by name; anything else goes to the AI, which answers with the address.
   const siteMatch = t.match(/^(?:open|launch|go to|bring up|pull up|start)\s+(?:up\s+)?(?:my\s+|the\s+)?(.+?)(?:\s+(?:web|website|site|page))?(?:\s+(?:in|on|from|with)\s+(?:my\s+)?(?:chrome|the browser|browser|edge))?$/);
@@ -167,6 +168,10 @@ export function localIntent(input: string): { action: string; text?: string } | 
   if(projectSearch&&!/[\r\n;&|`$<>]/.test(projectSearch[1]))return {action:'project-search',text:projectSearch[1].trim()};
   const research=text.match(/^(?:research|look up|search the web for)\s+([^\r\n]{3,500})$/i);
   if(research&&!/[\u0000-\u001f\u007f]/.test(research[1]))return {action:'research',text:research[1].trim()};
+  if(/^(?:close|hide|clear|dismiss) (?:the |that )?(?:display|screen|card|it|that)$|^(?:e2fel|2fel|eqfel) (?:el )?(?:screen|display|da|deh)$|^(?:اقفل|اخفي) (?:الشاشة|العرض|ده|دي)$/u.test(t))return {action:'show-close'};
+  // "Show me anything": English, Franco-Arabic and Arabic. Specific show-commands above win first.
+  const show=text.match(/^(?:show(?: me)?|display|put up|pull up|bring up|(?:can you |could you )?show me|let me see|e3redli|e3rdli|e3rdly|3rdli|3rdly|warini|wareeni|wareny|warrini|وريني|ورّيني|اعرض(?:لي|ي لي)?|اعرضلي|عرضلي)\s+(?:(?:about|on|a|an|the)\s+)?([^\r\n]{2,200})$/iu);
+  if(show&&!/[\u0000-\u001f\u007f]/.test(show[1]))return {action:'show',text:show[1].trim().replace(/[.!?؟]+$/u,'').replace(/\s+(?:on (?:the |my )?screen|please|for me|ala el screen|3al screen|على الشاشة)$/iu,'')};
   return null;
 }
 export function localInsight(records: Entry[], kind: 'continuity' | 'project-intelligence' | 'suggestions', now = new Date()): string {

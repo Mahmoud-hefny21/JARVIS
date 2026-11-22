@@ -8,6 +8,7 @@ mod claude;
 mod db;
 mod groq;
 mod integrations;
+mod mobile;
 mod intelligence;
 mod capture;
 mod offline_speech;
@@ -489,6 +490,10 @@ async fn weather(app: tauri::AppHandle) -> Result<Value> {
     background(move || integrations::weather(&app)).await
 }
 #[tauri::command]
+async fn wiki_lookup(query: String, lang: String) -> Result<Value> {
+    background(move || integrations::wiki_lookup(&query, &lang)).await
+}
+#[tauri::command]
 async fn google_connect(app: tauri::AppHandle) -> Result<()> {
     background(move || integrations::google_connect(&app)).await
 }
@@ -875,7 +880,7 @@ fn main() {
     builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
-        .plugin(tauri_plugin_autostart::Builder::new().build())
+        .plugin(tauri_plugin_autostart::Builder::new().args(["--hidden"]).build())
         .setup(move |app| {
             let dir = qa_dir.clone().unwrap_or(app.path().app_data_dir()?);
             let database = Database::open(&dir).map_err(std::io::Error::other)?;
@@ -932,10 +937,36 @@ fn main() {
                 offline_epoch: std::sync::atomic::AtomicU64::new(0),
             });
             app.manage(placement::State::default());
-            placement::open(app.handle(), None, Some(false))?;
+            // Started with Windows: stay in the tray, listening for "wake up".
+            if std::env::args().any(|a| a == "--hidden") {
+                if let Some(w) = app.get_webview_window("main") {
+                    let _ = w.hide();
+                }
+            } else {
+                placement::open(app.handle(), None, Some(false))?;
+            }
+            // One-time: start with Windows so "wake up" works even after the window is closed.
+            if qa_dir.is_none() {
+                let native_state = app.state::<NativeState>();
+                let db = &native_state.db;
+                if let Ok(db) = db.lock() {
+                    if db.get_value("wakeStartupEnabled").unwrap_or(Value::Null) != true {
+                        let mut prefs = db.get_value("preferences").unwrap_or(Value::Null);
+                        if prefs.is_object() && app.autolaunch().enable().is_ok() {
+                            prefs["autostart"] = json!(true);
+                            prefs["minimizeToTray"] = json!(true);
+                            let _ = db.set_value("preferences", &prefs);
+                            let _ = db.set_value("wakeStartupEnabled", &json!(true));
+                        }
+                    }
+                };
+            }
             placement::start(app.handle().clone());
             actions::recover(app.handle())?;
             runtime::start(app.handle().clone());
+            if qa_dir.is_none() {
+                mobile::start(app.handle().clone());
+            }
             let show =
                 tauri::menu::MenuItem::with_id(app, "show", "Open JARVIS", true, None::<&str>)?;
             let hide =
@@ -1031,6 +1062,8 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             sound_asset,
             active_window,
+            wiki_lookup,
+            mobile::mobile_reply,
             actions::action_prepare,
             actions::action_execute,
             actions::action_cancel,
