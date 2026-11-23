@@ -47,6 +47,12 @@ export const COMMANDS = [
   ['sagel en el locker code 42', 'remember', 'locker code 42'], ['note that the wifi password is on the router', 'remember', 'wifi password'], ['اكتب ان الاجتماع اتأجل', 'remember', 'الاجتماع'],
   ['zawed beyd 3al list', 'shopping-add', 'beyd'], ['add milk to my shopping list', 'shopping-add', 'milk'], ['ضيف عيش للمشتريات', 'shopping-add', 'عيش'], ['show my shopping list', 'shopping-show'], ['clear shopping list', 'shopping-clear'],
   ['good night', 'goodnight'], ['tesba7 3ala 5eer', 'goodnight'], ['تصبح على خير', 'goodnight'], ['study time', 'focus', '45'], ['focus 25 minutes', 'focus', '25'], ['stop focus', 'focus-end'],
+  // Study
+  ['summarize this pdf', 'study-summary'], ['lakhas el pdf', 'study-summary'], ['لخص الملف', 'study-summary'], ['لخصلي المحاضرة', 'study-summary'],
+  ['quiz me', 'study-quiz'], ['quiz me on recursion', 'study-quiz', 'recursion'], ['امتحني', 'study-quiz'], ['flashcards on networking', 'study-cards', 'networking'], ['make flashcards', 'study-cards'],
+  ['what does ubiquitous mean', 'define', 'ubiquitous'], ['ya3ni eh algorithm', 'define', 'algorithm'], ['يعني ايه خوارزمية', 'define', 'خوارزمية'], ['define entropy', 'define', 'entropy'],
+  ['gpa A 3, B+ 3, A- 2', 'gpa', 'A 3'], ['calculate my gpa A 3 B 4', 'gpa', 'A 3'],
+  ['my math exam is on January 10', 'exam', 'math'], ['networks final is on next sunday', 'exam', 'networks'], ['امتحان الفيزيا يوم الخميس', 'exam', 'الفيزيا'],
   // Close the card
   ['close the display', 'show-close'], ['e2fel el screen', 'show-close'], ['hide it', 'show-close'], ['اقفل الشاشة', 'show-close'],
   // Tasks
@@ -98,4 +104,7 @@ export const REMINDERS = [
   ['كل يوم الساعة ٨ الصبح فكرني اشرب مية', 'اشرب مية', [1, 8, 0]],
   ['bokra el sa3a 5 fakkarny akalem ahmed', 'akalem ahmed', [1, 17, 0]],
   ['remind me to take my medicine every day at 9pm', 'medicine', [0, 21, 0]],
+  ['remind me to pay rent on 1st of december', 'pay rent', [8, 9, 0]],
+  ['fakkarny el doctor 15 december el sa3a 4 el 3asr', 'doctor', [22, 16, 0]],
+  ['فكرني ادفع الايجار يوم ٢٠ ديسمبر', 'ادفع الايجار', [27, 9, 0]],
 ];

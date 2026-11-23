@@ -215,6 +215,18 @@ export function localIntent(input: string): { action: string; text?: string } | 
   const focus=t.replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).match(/^(?:study time|start studying|focus(?: mode)?|focus for|wa2t el mozakra|ha?zaker|هذاكر|وقت المذاكر[ةه]|ركز)(?:\s+(?:for\s+)?(\d{1,3})\s*(?:minutes?|mins?|d2aye2|da2aye2|دقيق[ةه]|دقايق))?$/u);
   if(focus)return {action:'focus',text:String(Number(focus[1]??45))};
   if(/^(?:stop focus(?:ing)?|end focus|focus off|khalas mozakra|خلصت مذاكر[ةه])$/u.test(t))return {action:'focus-end'};
+  // Study: summarize a lecture file, quiz, flashcards, dictionary, GPA, exams.
+  if(/^(?:summari[sz]e (?:a |this |my |the )?(?:pdf|file|document|lecture|chapter|notes)|lak+h?a?s (?:el |li |ly )?(?:pdf|file|lecture|mo7adra|el mo7adra)|لخص(?:لي| لي)? (?:ال)?(?:ملف|محاضر[ةه]|pdf|بي دي اف|شابتر))$/u.test(t))return {action:'study-summary'};
+  const quiz=t.match(/^(?:quiz me|make (?:me )?a quiz|test me|e3mel(?:ly|li)? quiz|e3melly emte7an|امتحني|اعمل(?:لي)? كويز)(?:\s+(?:on|about|fe|في|عن)\s+(.{2,80}))?$/u);
+  if(quiz)return {action:'study-quiz',text:quiz[1]??''};
+  const cards=t.match(/^(?:(?:make|create) (?:me )?flash ?cards|flash ?cards|e3mel(?:ly|li)? flash ?cards|اعمل(?:لي)? فلاش ?كارد(?:ز)?)(?:\s+(?:on|about|for|fe|في|عن)\s+(.{2,80}))?$/u);
+  if(cards)return {action:'study-cards',text:cards[1]??''};
+  const define=text.match(/^(?:what does (.{2,40}?) mean|define (.{2,40})|meaning of (.{2,40})|ya3ni (?:eh|eih) (.{2,40})|يعني (?:ايه|إيه|اي) (.{2,40})|معنى (?:كلم[ةه] )?(.{2,40}))[?؟.]?$/iu);
+  if(define)return {action:'define',text:(define[1]??define[2]??define[3]??define[4]??define[5]??define[6]).trim()};
+  const gpa=text.match(/^(?:calculate (?:my )?gpa|gpa|my gpa|el gpa|احسب(?:لي)? (?:المعدل|الجي بي ايه))\s*[:,-]?\s*(.+)$/iu);
+  if(gpa)return {action:'gpa',text:gpa[1]};
+  const exam=text.match(/^(?:my\s+)?(.{2,40}?)\s+(?:exam|final|midterm|quiz)\s+(?:is\s+)?(?:on\s+)?(.{3,40})$|^(?:emte7an|imti7an|امتحان)\s+(.{2,40}?)\s+(?:yom|يوم|on)\s+(.{3,40})$/iu);
+  if(exam)return {action:'exam',text:JSON.stringify({subject:(exam[1]??exam[3]).trim(),when:(exam[2]??exam[4]).trim()})};
   // "Show me anything": English, Franco-Arabic and Arabic. Specific show-commands above win first.
   const show=text.match(/^(?:show(?: me)?|display|put up|pull up|bring up|(?:can you |could you )?show me|let me see|e3redli|e3rdli|e3rdly|3rdli|3rdly|warini|wareeni|wareny|warrini|وريني|ورّيني|اعرض(?:لي|ي لي)?|اعرضلي|عرضلي)\s+(?:(?:about|on|a|an|the)\s+)?([^\r\n]{2,200})$/iu);
   if(show&&!/[\u0000-\u001f\u007f]/.test(show[1]))return {action:'show',text:show[1].trim().replace(/[.!?؟]+$/u,'').replace(/\s+(?:on (?:the |my )?screen|please|for me|ala el screen|3al screen|على الشاشة)$/iu,'')};
@@ -272,7 +284,17 @@ export function parseTaskWhen(input: string, now = new Date()): { title: string;
   const take = (re: RegExp) => { const m = text.match(re); if (m) text = (text.slice(0, m.index) + ' ' + text.slice(m.index! + m[0].length)).replace(/\s+/g, ' ').trim(); return m; };
   let m = take(/\bin (\d{1,3}) (minute|minutes|min|hour|hours)\b/i);
   if (m) { const d = new Date(now.getTime() + Number(m[1]) * (m[2].startsWith('h') ? 3600000 : 60000)); return { title: tidy(text), dueAt: d.toISOString() }; }
-  if (take(/\b(?:the )?day after tomorrow\b/i)) { day = new Date(now); day.setDate(day.getDate() + 2); }
+  // Calendar dates: "December 20", "20 December", "20th of Dec", "20/12" (day first, as in Egypt).
+  const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+  const monthIndex = (w: string) => MONTHS.indexOf(w.slice(0, 3).toLowerCase());
+  const dated = (month: number, date: number) => { const d = new Date(now.getFullYear(), month, date); if (d.getMonth() !== month) return null; if (d.getTime() < new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) d.setFullYear(d.getFullYear() + 1); return d; };
+  const MONTH_RE = '(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)';
+  let dm: RegExpMatchArray | null;
+  if ((dm = take(new RegExp('\\b(?:on\\s+)?' + MONTH_RE + '\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b', 'i')))) day = dated(monthIndex(dm[1]), Number(dm[2]));
+  else if ((dm = take(new RegExp('\\b(?:on\\s+)?(?:the\\s+)?(\\d{1,2})(?:st|nd|rd|th)?\\s+(?:of\\s+)?' + MONTH_RE + '\\b', 'i')))) day = dated(monthIndex(dm[2]), Number(dm[1]));
+  else if ((dm = take(/\b(?:on\s+)?(\d{1,2})\/(\d{1,2})(?:\/\d{2,4})?\b/))) day = dated(Number(dm[2]) - 1, Number(dm[1]));
+  if (day) { /* a calendar date was given */ }
+  else if (take(/\b(?:the )?day after tomorrow\b/i)) { day = new Date(now); day.setDate(day.getDate() + 2); }
   else if (take(/\b(tomorrow|tmrw)\b|بكر[ةه]/iu)) { day = new Date(now); day.setDate(day.getDate() + 1); }
   else if (take(/\btonight\b/i)) { day = new Date(now); hour = 20; }
   else if (take(/\btoday\b|النهارد[ةه]/iu)) day = new Date(now);
@@ -291,7 +313,7 @@ export function parseTaskWhen(input: string, now = new Date()): { title: string;
   day.setHours(hour ?? 9, minute, 0, 0);
   return { title: tidy(text), dueAt: day.toISOString(), ...(recurrence ? { recurrence } : {}) };
 }
-function tidy(text: string) { const t = text.replace(/\s+(on|at|by)$/i, '').trim(); return t.charAt(0).toUpperCase() + t.slice(1); }
+function tidy(text: string) { const t = text.replace(/\s+(?:on|at|by|يوم|yom)$/iu, '').trim(); return t.charAt(0).toUpperCase() + t.slice(1); }
 
 /** Picks the open task a spoken phrase refers to: best word overlap, or the newest task for "it"/"that"/empty. */
 export function matchTask<T extends { title: string; createdAt: string }>(phrase: string, tasks: T[]): T | null {

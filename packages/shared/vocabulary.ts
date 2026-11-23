@@ -62,6 +62,8 @@ export function timeToEnglish(input: string): string {
     .replace(/(?:^|\s)(?:kol\s+esbo3|kol\s+osbo3|كل\s+(?:اسبوع|أسبوع))(?=$|\s|[.,!؟?])/giu, ' every week')
     .replace(/(?:^|\s)(?:kol\s+shahr|كل\s+شهر)(?=$|\s|[.,!؟?])/giu, ' every month')
     .replace(/(?:^|\s)(?:kol|كل)\s+(?=(?:يوم\s+)?(?:السبت|الحد|الأحد|الاحد|الاتنين|التلات|الاربع|الخميس|الجمعة|el\s*sabt|el\s*7ad|el\s*etnen|el\s*talat|el\s*arba3|el\s*5amis|el\s*gom3a))/giu, ' every ');
+  const months: [RegExp, string][] = [[/يناير/gu, 'january'], [/فبراير/gu, 'february'], [/مارس/gu, 'march'], [/[أا]بريل/gu, 'april'], [/مايو/gu, 'may'], [/يونيو/gu, 'june'], [/يوليو/gu, 'july'], [/[أا]غسطس/gu, 'august'], [/سبتمبر/gu, 'september'], [/[أا]كتوبر/gu, 'october'], [/نوفمبر/gu, 'november'], [/ديسمبر/gu, 'december']];
+  for (const [re, month] of months) t = t.replace(re, month);
   const days: [RegExp, string][] = [
     [/(?:يوم\s+)?(?:السبت|el\s*sabt|yom\s+el\s*sabt)/giu, 'saturday'], [/(?:يوم\s+)?(?:الحد|الأحد|الاحد|el\s*7ad|yom\s+el\s*7ad)/giu, 'sunday'],
     [/(?:يوم\s+)(?:الاتنين|الإثنين|الاثنين)|yom\s+el\s*etnen|(?:^|\s)الاتنين(?=$|\s)/giu, ' monday'], [/(?:يوم\s+)?(?:التلات|الثلاثاء|el\s*talat)/giu, 'tuesday'],

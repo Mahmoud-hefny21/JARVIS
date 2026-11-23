@@ -123,3 +123,24 @@ pub fn media_key(key: String, level: Option<u32>) -> Result<()> {
     }
     Ok(())
 }
+
+/// English dictionary (dictionaryapi.dev, free): meanings with part of speech, an example, synonyms.
+#[tauri::command]
+pub async fn define_word(word: String) -> Result<Value> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let word = word.trim().to_lowercase();
+        if word.is_empty() || word.len() > 40 || !word.chars().all(|c| c.is_ascii_alphabetic() || c == '-' || c == ' ') {
+            return Err("Say one English word, sir.".to_string());
+        }
+        let d = get(&format!("https://api.dictionaryapi.dev/api/v2/entries/en/{}", word.replace(' ', "%20")))?;
+        let entry = d.as_array().and_then(|a| a.first()).ok_or("I couldn't find that word, sir.")?;
+        let meanings: Vec<Value> = entry["meanings"].as_array().cloned().unwrap_or_default().iter().take(3).map(|m| {
+            let def = &m["definitions"][0];
+            json!({"part": m["partOfSpeech"], "definition": def["definition"], "example": def["example"],
+                   "synonyms": m["synonyms"].as_array().map(|s| s.iter().take(5).cloned().collect::<Vec<_>>())})
+        }).collect();
+        Ok(json!({"word": entry["word"], "phonetic": entry["phonetic"], "meanings": meanings}))
+    })
+    .await
+    .map_err(|_| "Dictionary unavailable".to_string())?
+}

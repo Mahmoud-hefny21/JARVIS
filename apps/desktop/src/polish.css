@@ -357,3 +357,9 @@ body.workshop-page .display-card.enter{animation:dsp-side .5s cubic-bezier(.2,.8
 .dsp-body tr.dsp-now th,.dsp-body tr.dsp-now td{color:#ffc76a;font-weight:600}
 /* Quran verse on a card: large Arabic script. */
 .dsp-body .dsp-ayah{font-size:28px;line-height:2;text-align:center;color:#eafcff;font-family:"Amiri","Traditional Arabic","Segoe UI",serif;margin:8px 0 12px}
+/* Study cards: quiz answers and flashcards open on tap (works on the phone too, no script needed). */
+.dsp-quiz{display:grid;gap:12px}.dsp-quiz ul{list-style:none;margin:4px 0!important;padding:0!important}
+.dsp-quiz details summary,.dsp-card summary{cursor:pointer;color:#7cf3ff}
+.dsp-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.dsp-card{border:1px solid #1f6f88;border-radius:8px;padding:12px;background:#061e2b}
+.dsp-card summary{font-weight:600;list-style:none}.dsp-card[open]{border-color:#ffc76a}.dsp-card p{margin-top:8px;color:#d8f6ff}
