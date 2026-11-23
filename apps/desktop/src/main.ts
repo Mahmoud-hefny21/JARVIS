@@ -766,7 +766,9 @@ function dayBriefing():{html:string;speech:string}{
     +(overdue.length?row('Overdue',overdue.slice(0,4).map(x=>esc(x.title)).join(', '),'dsp-late'):'')+row('Today',dueToday.length?dueToday.slice(0,5).map(x=>esc(x.title)+' · '+t(new Date(x.dueAt))).join('<br>'):'No tasks due')
     +(events.length?row('Schedule',events.slice(0,5).map(e=>esc(e.title)+' · '+t(new Date(e.dueAt))).join('<br>')):'')+(matchToday?row('Egypt',esc(matchToday.title)+' · '+t(kickoff(matchToday)!)):'')
     +(bdays.length?row('Birthdays',bdays.map(b=>esc(b.name)).join(', ')):'')+(alarm?row('Alarm',t(new Date(alarm.at))):'')+(shop?row('Shopping list',shop+' item'+(shop>1?'s':'')):'')+'</tbody></table>';
-  const parts=[weather?'It\'s '+Math.round(weather.temperature)+' degrees and '+weather.description.toLowerCase()+'.':'',p.en+' is at '+t(next.at)+'.',overdue.length?overdue.length+' task'+(overdue.length>1?'s are':' is')+' overdue.':'',dueToday.length?dueToday.length+' due today.':'',events.length?'Next on your schedule: '+events[0].title+' at '+t(new Date(events[0].dueAt))+'.':'',matchToday?'Egypt play today at '+t(kickoff(matchToday)!)+'.':'',bdays.length?'It\'s '+bdays.map(b=>b.name).join(' and ')+'\'s birthday.':''];
+  const temp=weather?Math.round(weather.temperature):null;const advice=temp===null?'':temp>=33?' Stay hydrated.':temp<=14?' Take a jacket.':/rain|shower|drizzle|storm/i.test(weather!.description)?' Take an umbrella.':'';
+  const names=(xs:{title:string}[])=>xs.length===1?xs[0].title:xs.slice(0,-1).map(x=>x.title).join(', ')+' and '+xs[xs.length-1].title;
+  const parts=[weather?'Outside it\'s '+temp+' degrees and '+weather.description.toLowerCase()+'.'+advice:'',p.en+' is at '+t(next.at)+'.',overdue.length?'Overdue: '+names(overdue.slice(0,3))+'.':'',dueToday.length?'Today you have '+names(dueToday.slice(0,3))+(dueToday.length>3?', and '+(dueToday.length-3)+' more':'')+'.':open.length?'Nothing is due today.':'Your list is clear.',events.length?'Next on your schedule: '+events[0].title+' at '+t(new Date(events[0].dueAt))+'.':'',matchToday?'Egypt play today at '+t(kickoff(matchToday)!)+'.':'',bdays.length?'It\'s '+bdays.map(b=>b.name).join(' and ')+'\'s birthday.':''];
   return {html,speech:parts.filter(Boolean).join(' ')};}
 // Contacts live as notes titled "Contact: <name>" (phone and birthday in the body), on this PC only.
 const contacts=()=>state.list('memory').filter(m=>/^Contact: /.test(m.title)).map(m=>({rec:m,name:m.title.slice(9),phone:m.body.match(/phone: ?(\+?\d+)/)?.[1]??'',birthday:m.body.match(/birthday: ?(\d{2}-\d{2})/)?.[1]??''}));
@@ -1058,7 +1060,14 @@ async function cinematicWake(){
     const lines=[`${part}, sir. At your service.`,name?`Welcome back, ${name}. Your workspace is ready.`:`${part}, sir. Your workspace is ready.`];
     let status=cpu!=null&&cpu>85?` The processor is busy at ${Math.round(cpu)} percent.`:'';
     if(open)status+=` You have ${open} open task${open>1?'s':''}.`;
-    const day=dayBriefing();const greeting=lines[new Date().getMinutes()%lines.length]+' '+day.speech;void status;
+    const day=dayBriefing();void lines;void status;
+    const headline=await Promise.race([command<{title:string;source:string}[]>('news_headlines',{lang:'en',topic:''}).then(n=>n[0]?.title??'').catch(()=>''),new Promise<string>(r=>setTimeout(()=>r(''),2500))]);
+    const money=await command<Money>('money_get').catch(()=>null);const spentNow=money?thisMonth(money).reduce((s,e)=>s+e.amount,0):0;
+    const tmr=new Date(Date.now()+86400000).getDate();const renew=(money?.subscriptions??[]).filter(s=>s.day===tmr).map(s=>s.name);
+    const now=new Date();const date=now.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
+    const extras=[renew.length?renew.join(' and ')+' renew'+(renew.length===1?'s':'')+' tomorrow.':'',money?.budget?'You\'ve used '+Math.round(spentNow/money.budget*100)+' percent of this month\'s budget.':'',headline?'In the news: '+headline.replace(/\s+-\s+[^-]+$/,'')+'.':''];
+    const close=h<12?'Shall we get started?':h<18?'What are we working on?':'How can I help this evening?';
+    const greeting=part+', sir. It\'s '+date+', '+hijri(now).en+'. '+day.speech+' '+extras.filter(Boolean).join(' ')+' '+close;
     if(page!=='hud')go('hud');
     fillDisplay('Your day',day.html);
     mobileReply=greeting; // a phone "wake up" gets the same briefing as text
@@ -1074,6 +1083,7 @@ async function cinematicWake(){
     await speak(greeting).catch(()=>undefined);
     sound.stop('music',2500);
   }finally{waking=false;}
+  if(native&&desiredWake&&!conversing)void converse();
 }
 
 // Barge-in: during a voice conversation the next sentence is already being recorded while JARVIS talks,
@@ -1097,7 +1107,9 @@ async function converse(){
       catch(error){if(/no audible speech|catch that/i.test(String(error))&&request===speechRequest)continue;if(!/cancelled/i.test(String(error)))void state.activity('Voice follow-up stopped',String(error).slice(0,300));break;}
       finally{voiceMode='';}
       if(text)lastHeard=Date.now();
-      if(request!==speechRequest||!text||/^(stop|thanks|thank you|that'?s all|that is all|that'?ll be all|that will be all|goodbye|never ?mind|شكرا|مع السلامة)\b/i.test(text.replace(/^jarvis[,. ]*/i,''))){await command('speech_stop').catch(()=>{});break;}
+      if(!desiredWake)break;
+      if(request!==speechRequest||!text)continue; // something else spoke or nothing was said: keep listening
+      if(/^(stop|thanks|thank you|that'?s all|that is all|that'?ll be all|that will be all|goodbye|never ?mind|شكرا|مع السلامة)\b/i.test(text.replace(/^jarvis[,. ]*/i,''))){await command('speech_stop').catch(()=>{});break;}
       try{await runUserText(text,{isTrusted:true},true);if(muteRequested){muteRequested=false;break;}}catch(error){void state.activity('Voice request failed',String(error).slice(0,300));break;}
     }
   }finally{conversing=false;voiceSession=false;pendingCapture=null;aiState='Ready';render();
@@ -1234,7 +1246,7 @@ async function init() {
       // "Mute" / "unmute" act the instant they are heard, even while JARVIS is talking.
       if(/unmute/.test(said)){if((value.confidence??1)<0.5)return;voiceLog('unmuted');setMuted(false);void speak('I’m back, sir.');return;}
       if(/mute/.test(said)){if((value.confidence??1)<0.85)return;voiceLog('muted');setMuted(true);toast('Muted, sir. I\'m still listening; say “unmute” to hear me again.');return;}
-      if(/shut up|stop|enough/.test(said)){if((value.confidence??1)<0.6)return;voiceLog('hushed');speechRequest++;replyEpoch++;void command('speech_stop').catch(()=>undefined);return;}
+      if(/jarvis (?:shut up|stop)|shut up jarvis/.test(said)){if((value.confidence??1)<0.85)return;voiceLog('hushed');speechRequest++;replyEpoch++;void command('speech_stop').catch(()=>undefined);return;}
       // Called by name: he wants to talk, so focus mode and mute end (a misheard "mute" must never leave JARVIS silent).
       if(focusSilent)focusSilent=false;if(muted){setMuted(false);voiceLog('unmuted by name');}
       // JARVIS's own voice can sound like its name to the recognizer; while it speaks, accept only a confident match.
