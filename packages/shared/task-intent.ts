@@ -22,6 +22,8 @@ export function directScopes(input:string,context:{currentId?:string|null;previo
   if(intent?.action==='contact-save'||intent?.action==='birthday')return [{action:'record_put',resource:'new:memory'}];
   if(intent?.action==='whatsapp')return [{action:'open_website',resource:'whatsapp-send'}];
   if(intent?.action==='directions')return [{action:'open_website',resource:'maps-route'}];
+  if(intent?.action==='play')return [{action:'open_website',resource:'youtube-search'}];
+  if(intent?.action==='summarize-page')return [{action:'browser_page_read',resource:'browser-active'}];
   // An exam: one new calendar event plus up to three study reminders.
   if(intent?.action==='exam')return [{action:'record_put',resource:'new:event'},{action:'record_put',resource:'new:task'}];
   if(intent?.action==='shopping-add'||intent?.action==='shopping-clear')return [{action:'record_put',resource:'new:memory'},{action:'record_put',resource:'shopping-list'}];

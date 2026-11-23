@@ -153,8 +153,12 @@ Spoken reminders, alarms, named timers, recurring tasks, deadline warnings · qu
 ### Step 7 — Study and programming (≈ 4 sessions)
 Lecture PDF summaries, quizzes, flashcards, exam plans, dictionary, GPA, deadlines from university emails · open projects, run tests, dev servers, git by voice with confirmation, explain errors and code, commit messages.
 
+**Smarter brain, 23 Nov 2026:** live web search (DuckDuckGo), his course files (DocumentsJARVIS Courses), exact calculator, second-opinion check (Qwen3), learns corrections without "remember".
+
 ### Step 8 — PC, information and money (≈ 3 sessions)
 Brightness, dark mode, Bluetooth/Wi-Fi, window layouts, screenshots, file finder, tidy Downloads, clean temp files · news digest, weather alerts, page and YouTube summaries, music, radio, podcasts · expense tracker, budget, subscriptions, savings goal.
+
+**Built 23 Nov 2026:** brightness, dark mode, Wi-Fi/Bluetooth, screenshots, file finder (opens files, never programs), tidy Downloads and clean temp (both ask first) · news headlines (Google News, EN/AR, any topic), page summaries, music/radio/podcasts via YouTube search · expenses by category, monthly budget with warnings, subscriptions with a reminder the day before, savings goals. **Not yet:** window layouts, weather alerts, YouTube transcripts (the summary uses what the page shows).
 
 ### Step 9 — People, safety and personality (≈ 3–4 sessions)
 Email by voice, WhatsApp messages prepared for him to send, translation, contacts, birthdays, promises · private mode, PIN, voice lock, auto-lock, security alerts, document vault · "forget that", memory search, knowledge base from a folder, "think with me" · mood, small talk, celebrating wins, occasional wit.

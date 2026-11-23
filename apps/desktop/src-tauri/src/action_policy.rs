@@ -22,6 +22,13 @@ pub fn routine(action: &str, args: &Value, before: &str) -> Option<String> {
             {
                 return Some("maps-route".into());
             }
+            // A YouTube search (music, radio, podcasts): only shows results; he picks what plays.
+            if url.scheme() == "https" && url.host_str() == Some("www.youtube.com") && url.path() == "/results"
+                && url.username().is_empty() && url.password().is_none() && url.fragment().is_none()
+                && url.query_pairs().all(|(k, _)| k == "search_query")
+            {
+                return Some("youtube-search".into());
+            }
             // A WhatsApp message prepared for the owner: it only fills the chat box; WhatsApp still waits for Send.
             if url.scheme() == "https" && url.host_str() == Some("web.whatsapp.com") && url.path() == "/send"
                 && url.username().is_empty() && url.password().is_none() && url.fragment().is_none()

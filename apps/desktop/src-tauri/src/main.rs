@@ -15,6 +15,7 @@ mod intelligence;
 mod capture;
 mod offline_speech;
 mod brain;
+mod pc;
 mod ollama;
 mod placement;
 mod push;
@@ -1135,6 +1136,12 @@ fn main() {
             brain::courses_search_cmd,
             brain::courses_open,
             brain::answer_review,
+            pc::pc_control,
+            pc::files_find,
+            pc::file_open_found,
+            pc::money_get,
+            pc::money_put,
+            pc::news_headlines,
             voiceid::voiceid_status,
             voiceid::voiceid_enroll_clip,
             voiceid::voiceid_enroll_finish,

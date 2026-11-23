@@ -317,6 +317,11 @@ body.workshop-page .topbar{border-bottom-color:transparent}
 .dsp-list li span{color:#8fc7d6;font-size:13px}
 .dsp-list li p{flex-basis:100%;color:#a9cfdb;font-size:13px}
 .dsp-empty{color:#8fc7d6}
+.dsp-list li small{color:#8fc7d6;font-size:12px;flex-basis:100%}
+.dsp-link{all:unset;cursor:pointer;color:#cdf6ff}
+.dsp-link:hover,.dsp-link:focus-visible{color:#7cf3ff;text-decoration:underline}
+.dsp-bar{flex-basis:100%;height:4px;background:#0f3a4c;border-radius:2px;overflow:hidden}
+.dsp-bar i{display:block;height:100%;background:#7cf3ff}
 .dsp-big{font-size:56px;font-weight:300;color:#7cf3ff}
 .dsp-loading{display:flex;align-items:center;gap:12px;color:#8fc7d6;padding:24px 4px}
 .display-card[dir="rtl"],.dsp-body:lang(ar){direction:rtl}

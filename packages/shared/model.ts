@@ -262,6 +262,47 @@ export function localIntent(input: string): { action: string; text?: string } | 
   const route=text.match(/^(?:(?:can you |please )?(?:give|show|send) me (?:the )?(?:location|directions|route|way|map) (?:to|of|for)|(?:get |show )?directions to|(?:the )?(?:route|way) to|navigate to|take me to|how (?:do i|can i|to) (?:get|go) to|(?:give me |show me )?(?:the )?location of|where is the location of|wadini|waddini|wa2eny|wasalni|el taree2 (?:le|l|li)|(?:a|e)wsal ezay (?:le|l)?|ازاي (?:اروح|أروح|اوصل|أوصل)|(?:اوصل|أوصل) ازاي|وديني|ودّيني|خدني|الطريق (?:لـ?|ل|الى|إلى))\s*(.{2,60}?)[?.!؟]*$/iu);
   if(route)return {action:'directions',text:route[1].replace(/^(?:the|el|al)\s+/i,'').trim()};
   if(/^(?:take me home|(?:i want to )?go home|wadini el beit|روحني|عايز اروح البيت)$/iu.test(t))return {action:'directions',text:'home'};
+  // PC control. "Sha8al/شغل" + Wi-Fi/Bluetooth must win over "play".
+  const tn=t.replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+  const bright=tn.match(/^(?:(?:set |make |put )?(?:the )?(?:screen )?brightness (?:to |at )?(\d{1,3}) ?%?|(?:el )?(?:edaa?ya|e?daa2a|brightness) (\d{1,3})|(?:ال)?(?:اضاءة|إضاءة|سطوع) (\d{1,3}))$/u);
+  if(bright)return {action:'pc',text:'brightness:'+(bright[1]??bright[2]??bright[3])};
+  if(/^(?:(?:increase|raise|turn up) (?:the )?brightness|brightness up|brighter|(?:3alli|3ally|zawed|zawwed) el (?:edaa?ya|e?daa2a|brightness)|(?:علي|على|زود) (?:ال)?(?:اضاءة|إضاءة))$/u.test(t))return {action:'pc',text:'brightness:up'};
+  if(/^(?:(?:decrease|lower|turn down|reduce|dim) (?:the )?(?:brightness|screen)|brightness down|dimmer|(?:watti|wati|wa6y|2allel|alel) el (?:edaa?ya|e?daa2a|brightness)|(?:وطي|قلل) (?:ال)?(?:اضاءة|إضاءة))$/u.test(t))return {action:'pc',text:'brightness:down'};
+  if(/^(?:(?:turn on |enable |switch to |go )?dark (?:mode|theme)(?: on)?|(?:sha8al|shaghal) (?:el )?dark mode|(?:شغل )?(?:الوضع الليلي|الوضع الداكن|الدارك مود))$/u.test(t))return {action:'pc',text:'dark:on'};
+  if(/^(?:(?:turn on |enable |switch to |go )?light (?:mode|theme)(?: on)?|dark mode off|(?:turn off|disable) dark mode|(?:2fel|e2fel|a2fel) (?:el )?dark mode|(?:اقفل|الغي) (?:الوضع الليلي|الدارك مود)|الوضع الفاتح)$/u.test(t))return {action:'pc',text:'dark:off'};
+  const radio=t.match(/^(?:turn |switch )?(on|off) (?:the )?(wi-?fi|wireless|bluetooth)$|^(?:turn |switch )?(?:the )?(wi-?fi|bluetooth) (on|off)$|^(sha8al|shaghal|2fel|e2fel|a2fel|open|close|شغل|اقفل|افصل) (el |ال)?(wi-?fi|bluetooth|واي ?فاي|بلوتوث)$/u);
+  if(radio){const on=radio[1]??radio[4]??radio[5];const dev=radio[2]??radio[3]??radio[7];return {action:'pc',text:(/blue|بلوتوث/u.test(dev)?'bluetooth':'wifi')+':'+(/^(?:on|sha8al|shaghal|open|شغل)$/u.test(on)?'on':'off')};}
+  if(/^(?:(?:take|grab) (?:a )?screen ?shot|screen ?shot|screen capture|capture (?:the|my) screen|e5od screen ?shot|(?:خد |اعمل )?سكرين ?شوت|صور الشاشة)$/u.test(t))return {action:'pc',text:'screenshot'};
+  if(/^(?:tidy|clean ?up|organi[sz]e|sort|arrange) (?:up )?(?:my |the )?downloads?(?: folder)?$|^(?:ratteb|rateb|nadaf|nadaff) el downloads?$|^(?:رتب|نظم|نضف) (?:فولدر )?(?:ال)?(?:داونلود|داونلودز|تنزيلات)$/u.test(t))return {action:'pc',text:'tidy-downloads'};
+  if(/^(?:clean|clear|delete|remove) (?:up )?(?:the |my )?(?:temp|temporary|junk)(?: files)?$|^free (?:up )?(?:some )?(?:disk )?space$|^nadaf el (?:gehaz|laptop|temp)$|^(?:نضف الجهاز|امسح الملفات المؤقتة|نضف الملفات المؤقتة)$/u.test(t))return {action:'pc',text:'clean-temp'};
+  const find=t.match(/^(?:find|search for|look for|locate|where(?:'s| is)) (?:my |the |a )?(?:file|files|document|pdf|folder|presentation|sheet) (?:called |named |about )?(.{2,60})$|^(?:find|locate) (?:my |the )?(.{2,50}) (?:file|pdf|document|folder|presentation|slides)$|^(?:dawar|dawarli|dawwar) (?:3la|3ala) (?:file |malaf |el file )?(.{2,50})$|^(?:دور|دورلي|دوّر) على (?:ملف |فايل |الملف )?(.{2,50})$|^search for (?:ملف|الملف|فايل|file) (.{2,50})$/u);
+  if(find)return {action:'find-file',text:(find[1]??find[2]??find[3]??find[4]??find[5]).trim()};
+  const openFile=t.match(/^open (?:my |the )?(?:file|document|pdf|presentation) (?:called |named )?(.{2,60})$|^(?:efta7|eftah) (?:el )?(?:file|malaf) (.{2,50})$|^افتح (?:ملف|الملف|فايل) (.{2,50})$/u);
+  if(openFile)return {action:'open-file',text:(openFile[1]??openFile[2]??openFile[3]).trim()};
+  // News and media.
+  const news=t.match(/^(?:(?:the |today'?s |latest |any )?news|headlines|what'?s (?:in )?the news|what'?s happening(?: in (?:egypt|the world))?|news (?:about|on) (.{2,40})|(?:el )?(?:akhbar|a5bar)(?: (?:el )?(.{2,40}?))?(?: eh| a)?|(?:ايه )?(?:ال)?(?:اخبار|أخبار)(?: (.{2,40}?))?(?: ايه)?)$/u);
+  if(news)return {action:'news',text:(news[1]??news[2]??news[3]??'').replace(/^(?:el|al) /,'').trim()};
+  if(/^(?:summari[sz]e|sum up|tl;?dr|give me (?:a )?summary of) (?:this|the|that) (?:page|article|tab|website|site|video)$|^(?:lakhas|la5as|la5asly|lakhasly) (?:el )?(?:safha|page|maqal|video|article)(?: de| da)?$|^لخص(?:لي)? (?:الصفحة|المقال|الفيديو|ده|دي)(?: دي| ده)?$/u.test(t))return {action:'summarize-page'};
+  const play=t.match(/^(?:play|put on|sha8al|shaghal|شغل|شغّل|شغللي)\s+(?:some |me |li |لي )?(.{2,60})$/u);
+  // 'شغل X' reaches here as 'open X': a name in Arabic (not an app such as الإعدادات) means something to play.
+  const playAr=t.match(/^open ((?!ال)[؀-ۿ].{1,59}|.*(?:قرآن|قران|راديو|اغاني|أغاني|موسيقى|مزيكا|بودكاست).*)$/u);
+  if(playAr)return {action:'play',text:playAr[1].trim()};
+  if(play&&play[1]==='music')return {action:'play',text:'relaxing music'};
+  if(play&&!/^(?:it|that|this)$|^(?:the )?(?:next|previous)/.test(play[1]))return {action:'play',text:play[1].trim()};
+  // Money: expenses, budget, subscriptions and savings goals, in pounds.
+  const spent=tn.match(/^(?:i )?(?:spent|paid|spend) (\d+(?:\.\d+)?) ?(?:pounds?|egp|le|gneh|geneh)? ?(?:on|for) (.{2,40})$|^(?:sraft|sarraft|dafa3t|dafaat) (\d+(?:\.\d+)?) ?(?:geneh|gneh|ginih|gnih|pound|le)? ?(?:3la|3ala|f|fe|fel|3al) (.{2,40})$|^(?:صرفت|دفعت) (\d+(?:\.\d+)?) ?(?:جنيه|ج)? ?(?:على|في|ع|عال|فى) ?(.{2,40})$/u);
+  if(spent)return {action:'expense',text:(spent[1]??spent[3]??spent[5])+'|'+(spent[2]??spent[4]??spent[6]).trim()};
+  if(/^(?:how much (?:did i|have i) spen[dt](?: (?:this|so far this) (?:month|week)| today)?|(?:show )?my (?:expenses|spending)(?: this month)?|(?:ana )?sraft kam(?: el shahr da)?|(?:انا )?صرفت كام(?: الشهر ده)?|مصاريفي|مصاريف الشهر)$/u.test(t))return {action:'spending'};
+  const budget=tn.match(/^(?:(?:set )?my (?:monthly )?budget (?:is |to )?|set (?:a )?budget (?:of |to )?|budget )(\d+)(?: (?:pounds?|egp))?$|^(?:el )?budget (?:bta3y )?(\d+)$|^(?:الميزانية|ميزانيتي)(?: الشهرية)? (\d+)$/u);
+  if(budget)return {action:'budget',text:budget[1]??budget[2]??budget[3]};
+  const sub=tn.match(/^(?:add (?:a )?subscription|new subscription|subscription) (.{2,30}?) (\d+)(?: (?:pounds?|egp|a month|monthly|per month))*(?: (?:on|every) (?:the )?(\d{1,2})(?:st|nd|rd|th)?)?$|^(?:ishtirak|eshterak|اشتراك) (.{2,30}?) (\d+)(?: (?:geneh|جنيه))?(?: (?:yom|يوم) (\d{1,2}))?$/u);
+  if(sub)return {action:'subscription',text:(sub[1]??sub[4]).trim()+'|'+(sub[2]??sub[5])+'|'+(sub[3]??sub[6]??'')};
+  if(/^(?:(?:show |list )?my subscriptions|subscriptions|el eshterakat|ishtirakaty|اشتراكاتي|الاشتراكات)$/u.test(t))return {action:'subscriptions'};
+  const saveGoal=tn.match(/^(?:i want to save|save up|savings goal(?: of)?|new savings goal) (\d+)(?: (?:pounds?|egp))? (?:for|to buy) (?:a |an |the )?(.{2,40})$|^(?:3ayez|3ayz|3awz) a?(?:7awesh|hawesh|a7awesh) (\d+) (?:l|le|li|3shan|3ashan) (.{2,40})$|^(?:عايز|عاوز) (?:احوش|أحوش) (\d+) (?:ل|عشان|علشان) ?(.{2,40})$/u);
+  if(saveGoal)return {action:'goal',text:(saveGoal[1]??saveGoal[3]??saveGoal[5])+'|'+(saveGoal[2]??saveGoal[4]??saveGoal[6]).trim()};
+  const saved=tn.match(/^i (?:saved|put aside|added) (\d+)(?: (?:pounds?|egp))?(?: (?:for|to|towards?) (?:the |my )?(.{2,40}))?$|^(?:7awesht|hawesht|a7awesht) (\d+)(?: (?:l|le|3shan) (.{2,40}))?$|^(?:حوشت|وفرت) (\d+)(?: (?:ل|عشان) ?(.{2,40}))?$/u);
+  if(saved)return {action:'saved',text:(saved[1]??saved[3]??saved[5])+'|'+(saved[2]??saved[4]??saved[6]??'').trim()};
+  if(/^(?:(?:show )?my (?:savings|goals|savings goals)|how much (?:have i|did i) save[d]?|ana 7awesht kam|(?:انا )?حوشت كام|تحويشتي|اهدافي)$/u.test(t))return {action:'goals'};
   // His course files: the folder JARVIS reads lecture material from.
   if(/^(?:open (?:my )?(?:courses?|lectures?|study)(?: folder| files)?|(?:my )?courses folder|(?:efta7|open) (?:el )?(?:mawad|mo7adrat|المواد|المحاضرات)|افتح (?:فولدر |ملف )?(?:المواد|المحاضرات))$/u.test(t))return {action:'courses'};
   // "Show me anything": English, Franco-Arabic and Arabic. Specific show-commands above win first.

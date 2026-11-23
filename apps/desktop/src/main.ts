@@ -662,6 +662,29 @@ async function answer(input:string,task?:UserTask,directVoiceRequest=false) {
       await command('open_website',{url},task);
       fillDisplay('Route to '+label,'<p class="dsp-sub">From '+esc(state.settings.location)+'</p><p>Google Maps is open with the driving route and live traffic.</p><p class="dsp-empty">'+esc(destination)+'</p>');
       response=wantsEgyptianArabic(input)?'فتحتلك الطريق لـ'+label+' على جوجل مابس يا فندم، من الرحاب.':'Here\'s the route to '+label+' from '+state.settings.location+', sir. Google Maps is open with live traffic.';}
+    else if(intent?.action==='pc'){const [op,val='']=intent.text!.split(':');const ar=wantsEgyptianArabic(input);
+      const r=await command<Record<string,unknown>>('pc_control',{op,value:val});
+      if(op==='brightness')response=ar?'الإضاءة '+r.brightness+'% يا فندم.':'Brightness is at '+r.brightness+'%, sir.';
+      else if(op==='dark')response=val==='on'?(ar?'الوضع الليلي اشتغل.':'Dark mode on, sir.'):(ar?'رجعنا للوضع الفاتح.':'Light mode on, sir.');
+      else if(op==='wifi'||op==='bluetooth'){const name=op==='wifi'?'Wi-Fi':'Bluetooth';response=r.opened?(ar?'ويندوز مسمحليش أغيره، فتحتلك إعدادات ال'+name+'.':'Windows wouldn\'t let me switch it, so I opened the '+name+' settings, sir.'):(ar?name+(val==='on'?' اشتغل.':' اتقفل.'):name+' is '+val+', sir.');}
+      else if(op==='screenshot'){const file=String(r.file);fillDisplay('Screenshot','<p class="dsp-sub">Saved to Pictures › Screenshots</p><p class="dsp-empty">'+esc(file.split(/[\\/]/).pop()??file)+'</p>');response=ar?'خدت سكرين شوت وحفظتها في الصور.':'Screenshot saved to Pictures, Screenshots, sir.';}
+      else if(op==='tidy-downloads')response=Number(r.moved)?(ar?'رتبت '+r.moved+' ملف في الداونلودز حسب النوع.':'Sorted '+r.moved+' files in Downloads into folders by type, sir.'):(ar?'الداونلودز متروقة أصلاً.':'Downloads is already tidy, sir.');
+      else if(op==='clean-temp')response=Number(r.files)?(ar?'مسحت '+r.files+' ملف مؤقت ووفرت '+r.freedMB+' ميجا.':'Cleared '+r.files+' temporary files and freed '+r.freedMB+' MB, sir.'):(ar?'مفيش ملفات مؤقتة قديمة.':'No old temporary files to clear, sir.');}
+    else if(intent?.action==='find-file'||intent?.action==='open-file'){const ar=wantsEgyptianArabic(input);const hits=await command<{path:string;name:string;folder:boolean}[]>('files_find',{query:intent.text});
+      if(!hits.length)response=ar?'ملقيتش ملف اسمه '+intent.text+' في فولدراتك.':'I couldn\'t find anything called “'+intent.text+'” in your folders, sir.';
+      else if(intent.action==='open-file'){await command('file_open_found',{path:hits[0].path});response=ar?'فتحتلك '+hits[0].name+'.':'Opening '+hits[0].name+', sir.';}
+      else{fillDisplay('Files · '+intent.text,'<ul class="dsp-list">'+hits.map(h=>'<li><button class="dsp-link" data-open-found="'+esc(h.path)+'">'+(h.folder?'📁 ':'')+esc(h.name)+'</button><small>'+esc(h.path.replace(/[\\/][^\\/]*$/,''))+'</small></li>').join('')+'</ul>');
+        response=ar?'لقيت '+hits.length+'، أحدثهم '+hits[0].name+'. دوس على اللي عايزه.':'Found '+hits.length+'; the newest is '+hits[0].name+'. Tap one to open it, sir.';}}
+    else if(intent?.action==='news'){const ar=wantsEgyptianArabic(input)||/[\u0600-\u06FF]/.test(intent.text??'');const items=await command<{title:string;source:string;url:string}[]>('news_headlines',{lang:ar?'ar':'en',topic:intent.text??''});
+      if(!items.length)response=ar?'مفيش أخبار جديدة عن ده دلوقتي.':'Nothing new on that right now, sir.';
+      else{fillDisplay((ar?'الأخبار':'News')+(intent.text?' · '+intent.text:''),'<ul class="dsp-list" dir="auto">'+items.slice(0,8).map(i=>'<li>'+esc(i.title)+'<small>'+esc(i.source)+'</small></li>').join('')+'</ul>');
+        response=await brainAsk('These are the latest headlines'+(intent.text?' about '+intent.text:' in Egypt and the world')+'. Tell sir the 3 most important in 2-3 natural spoken sentences, no list, no preamble.'+(ar?' Reply in Egyptian Arabic, Arabic script.':''),items.slice(0,10).map(i=>i.title+' ('+i.source+')').join('\n')).catch(()=>items.slice(0,3).map(i=>i.title).join('. ')+'.');}}
+    else if(intent?.action==='summarize-page'){const ar=wantsEgyptianArabic(input);const page=await command<string>('browser_page_read',{},task);if(!page.trim())throw new Error(ar?'مقدرتش أقرا الصفحة دي.':'I couldn\'t read that page, sir.');
+      response=await brainAsk('Summarize this page (it may be an article or a YouTube video page) for sir: the main point first, then the key details, in 3-5 short spoken sentences, no lists.'+(ar?' Reply in Egyptian Arabic, Arabic script.':''),page.slice(0,12000));}
+    else if(intent?.action==='play'){const q=intent.text!;const query=/radio|راديو|quran|قرآن|قران/iu.test(q)?q+' live':q;
+      await command('open_website',{url:'https://www.youtube.com/results?search_query='+encodeURIComponent(query)},task);
+      response=wantsEgyptianArabic(input)?'فتحتلك '+q+' على يوتيوب، اختار اللي يعجبك.':'Here\'s '+q+' on YouTube, sir. Pick the one you like.';}
+    else if(['expense','spending','budget','subscription','subscriptions','goal','saved','goals'].includes(intent?.action??'')){response=await moneyCommand(intent!.action,intent!.text??'',wantsEgyptianArabic(input));}
     else if(intent?.action==='courses'){const r=await command<{files:number;updated:number}>('courses_index_cmd');await command('courses_open');
       response=wantsEgyptianArabic(input)?'فتحتلك فولدر المواد يا فندم. حط فيه ملفات المحاضرات (PDF أو نص) وأنا هقراها وأجاوب منها. عندي دلوقتي '+r.files+' ملف.':'Your courses folder is open, sir. Drop lecture PDFs or notes in it and I\'ll read them and answer from them. I have '+r.files+' file'+(r.files===1?'':'s')+' so far.';}
     else if(intent?.action==='show')response=await showOnScreen(intent.text!);
@@ -796,6 +819,45 @@ async function footballTick(){
     void command('push_notify',{title:/FT|Finished/i.test(live.status??'')?'Full time':'Goal!',body:line}).catch(()=>{});if(native&&state.settings.speak!==false)await speak((/FT|Finished/i.test(live.status??'')?'Full time. ':'Goal, sir! ')+line+'.').catch(()=>{});}}
 }
 // A fact-focused answer from the brain, grounded in JARVIS's library and a live Wikipedia article when available.
+// His money notebook: expenses by category, a monthly budget, subscriptions and savings goals (EGP).
+type Money={expenses:{at:string;amount:number;what:string;cat:string}[];budget:number;subscriptions:{name:string;amount:number;day:number}[];goals:{name:string;target:number;saved:number}[]};
+const MONEY_CATS:[RegExp,string][]=[[/food|lunch|dinner|breakfast|akl|ak?l\b|اكل|أكل|غدا|عشا|فطار|مطعم|restaurant|coffee|kahwa|قهوة|talabat|طلبات|snack/iu,'Food'],[/uber|careem|indrive|taxi|metro|bus|transport|mowasalat|مواصلات|بنزين|benzine|fuel|عربية|microbus/iu,'Transport'],[/book|course|uni|gam3a|جامعة|كتاب|كورس|ملازم|print|طباعة|study/iu,'Study'],[/clothes|hdom|هدوم|shoes|جزمة|لبس|shirt/iu,'Clothes'],[/phone|internet|\bnet\b|recharge|sha7n|شحن|كارت|vodafone|orange|etisalat|\bwe\b/iu,'Phone & internet'],[/gym|doctor|pharmacy|dawa|دوا|صيدلية|دكتور|medicine/iu,'Health'],[/game|movie|cinema|outing|5rooga|خروجة|سينما|playstation|netflix|spotify/iu,'Fun'],[/gift|hdya|هدية/iu,'Gifts']];
+const moneyCat=(w:string)=>MONEY_CATS.find(([re])=>re.test(w))?.[1]??'Other';
+const egp=(n:number)=>n.toLocaleString('en-US',{maximumFractionDigits:2})+' EGP';
+const thisMonth=(m:Money,d=new Date())=>m.expenses.filter(e=>{const x=new Date(e.at);return x.getMonth()===d.getMonth()&&x.getFullYear()===d.getFullYear();});
+async function moneyCommand(action:string,text:string,ar:boolean):Promise<string>{
+  const m=await command<Money>('money_get');m.expenses??=[];m.subscriptions??=[];m.goals??=[];m.budget??=0;
+  const [a,b='',c='']=text.split('|');const amount=Number(a);const save=()=>command('money_put',{value:m});
+  if(action==='expense'){if(!(amount>0))return ar?'المبلغ مش واضح يا فندم.':'I didn\'t catch the amount, sir.';
+    m.expenses.push({at:new Date().toISOString(),amount,what:b.slice(0,60),cat:moneyCat(b)});m.expenses=m.expenses.slice(-3000);await save();
+    const total=thisMonth(m).reduce((s,e)=>s+e.amount,0);const left=m.budget?m.budget-total:null;
+    const warn=left!==null&&left<0?(ar?' عديت الميزانية بـ'+egp(-left)+'.':' You\'re '+egp(-left)+' over budget this month.'):left!==null&&total>m.budget*0.8?(ar?' فاضلك '+egp(left)+' بس من الميزانية.':' Only '+egp(left)+' left in this month\'s budget.'):'';
+    return (ar?'سجلت '+egp(amount)+' على '+b+'. صرفت '+egp(total)+' الشهر ده.':'Logged '+egp(amount)+' on '+b+'. That\'s '+egp(total)+' this month.')+warn;}
+  if(action==='spending'){const list=thisMonth(m);const total=list.reduce((s,e)=>s+e.amount,0);
+    if(!list.length)return ar?'مسجلتش أي مصاريف الشهر ده. قولي مثلاً "صرفت ١٠٠ على أكل".':'No spending logged this month, sir. Say something like “I spent 100 on food”.';
+    const by=new Map<string,number>();for(const e of list)by.set(e.cat,(by.get(e.cat)??0)+e.amount);const rows=[...by].sort((x,y)=>y[1]-x[1]);
+    fillDisplay('Spending · '+new Date().toLocaleString('en',{month:'long'}),'<p class="dsp-big">'+egp(total)+'</p>'+(m.budget?'<p class="dsp-sub">Budget '+egp(m.budget)+' · '+(m.budget-total>=0?egp(m.budget-total)+' left':egp(total-m.budget)+' over')+'</p>':'')+'<ul class="dsp-list">'+rows.map(([k,v])=>'<li>'+esc(k)+'<small>'+egp(v)+' · '+Math.round(v/total*100)+'%</small></li>').join('')+'</ul>');
+    return ar?'صرفت '+egp(total)+' الشهر ده، أكتر حاجة على '+rows[0][0]+' ('+egp(rows[0][1])+').'+(m.budget?' فاضلك '+egp(Math.max(0,m.budget-total))+'.':''):'You\'ve spent '+egp(total)+' this month, most of it on '+rows[0][0]+' ('+egp(rows[0][1])+').'+(m.budget?(m.budget>=total?' '+egp(m.budget-total)+' left in the budget.':' That\'s '+egp(total-m.budget)+' over budget.'):'');}
+  if(action==='budget'){if(!(amount>0))return ar?'المبلغ مش واضح.':'I didn\'t catch the amount, sir.';m.budget=amount;await save();const total=thisMonth(m).reduce((s,e)=>s+e.amount,0);
+    return ar?'الميزانية الشهرية '+egp(amount)+'. صرفت منها '+egp(total)+' لحد دلوقتي.':'Monthly budget set to '+egp(amount)+'. You\'ve used '+egp(total)+' so far this month, sir.';}
+  if(action==='subscription'){const day=Math.min(28,Math.max(1,Number(c)||new Date().getDate()));m.subscriptions=m.subscriptions.filter(s=>s.name.toLowerCase()!==a.toLowerCase());m.subscriptions.push({name:a.slice(0,40),amount:Number(b),day});await save();
+    return ar?'سجلت اشتراك '+a+' بـ'+egp(Number(b))+' كل شهر يوم '+day+'، وهفكرك قبلها بيوم.':'Added '+a+' at '+egp(Number(b))+' a month on the '+day+'th. I\'ll remind you the day before, sir.';}
+  if(action==='subscriptions'){if(!m.subscriptions.length)return ar?'مفيش اشتراكات مسجلة. قولي مثلاً "اشتراك نتفليكس ٢٠٠ يوم ٥".':'No subscriptions yet, sir. Say “add subscription Netflix 200 on the 5th”.';
+    const total=m.subscriptions.reduce((s,x)=>s+x.amount,0);fillDisplay('Subscriptions','<p class="dsp-big">'+egp(total)+' / month</p><ul class="dsp-list">'+m.subscriptions.map(s=>'<li>'+esc(s.name)+'<small>'+egp(s.amount)+' · day '+s.day+'</small></li>').join('')+'</ul>');
+    return ar?'عندك '+m.subscriptions.length+' اشتراكات بـ'+egp(total)+' في الشهر.':'You have '+m.subscriptions.length+' subscriptions costing '+egp(total)+' a month, sir.';}
+  if(action==='goal'){if(!(amount>0))return ar?'المبلغ مش واضح.':'I didn\'t catch the amount, sir.';m.goals=m.goals.filter(g=>g.name.toLowerCase()!==b.toLowerCase());m.goals.push({name:b.slice(0,40),target:amount,saved:0});await save();
+    return ar?'هدف جديد: '+egp(amount)+' عشان '+b+'. قولي "حوشت ٥٠٠" كل ما تحوش.':'New goal: '+egp(amount)+' for '+b+'. Tell me “I saved 500” whenever you put money aside, sir.';}
+  if(action==='saved'){if(!m.goals.length)return ar?'مفيش هدف تحويش لسه. قولي "عايز احوش ١٠٠٠٠ عشان لابتوب".':'There\'s no savings goal yet, sir. Say “I want to save 10000 for a laptop”.';
+    const g=m.goals.find(x=>b&&x.name.toLowerCase().includes(b.toLowerCase().replace(/^(?:the|my|el|al) /,'')))??m.goals[m.goals.length-1];g.saved+=amount;await save();const pct=Math.min(100,Math.round(g.saved/g.target*100));
+    return ar?'حلو! بقى معاك '+egp(g.saved)+' من '+egp(g.target)+' لـ'+g.name+' ('+pct+'%).':(pct>=100?'You\'ve reached your '+g.name+' goal, sir. Well done.':'Nice. '+egp(g.saved)+' of '+egp(g.target)+' saved for '+g.name+', that\'s '+pct+'%.');}
+  if(action==='goals'){if(!m.goals.length)return ar?'مفيش أهداف تحويش لسه.':'No savings goals yet, sir.';
+    fillDisplay('Savings goals','<ul class="dsp-list">'+m.goals.map(g=>{const pct=Math.min(100,Math.round(g.saved/g.target*100));return '<li>'+esc(g.name)+'<small>'+egp(g.saved)+' / '+egp(g.target)+' · '+pct+'%</small><span class="dsp-bar"><i style="width:'+pct+'%"></i></span></li>';}).join('')+'</ul>');
+    return m.goals.map(g=>(ar?g.name+': '+Math.round(g.saved/g.target*100)+'%':g.name+' is at '+Math.round(g.saved/g.target*100)+'%')).join(ar?'، ':', ')+(ar?'.':', sir.');}
+  return '';}
+// The day before a subscription renews: a heads-up on screen and on his phone.
+async function subscriptionReminders(){if(!native)return;try{const m=await command<Money>('money_get');const t=new Date(Date.now()+86400000);
+  for(const s of m.subscriptions??[]){if(s.day!==t.getDate())continue;const key='jarvis-sub-'+s.name+'-'+t.toDateString();try{if(localStorage.getItem(key))continue;localStorage.setItem(key,'1');}catch{}
+    const text='Sir, '+s.name+' renews tomorrow: '+egp(s.amount)+'.';hudAlert(text);void command('push_notify',{title:'Subscription tomorrow',body:text}).catch(()=>{});}}catch{}}
 // Before answering: his course files, the live web for current facts, and an exact calculator for numbers.
 async function thinkingAids(input:string):Promise<string[]>{
   const jobs:Promise<string>[]=[command<{file:string;text:string}[]>('courses_search_cmd',{query:input}).then(h=>h.length?('HIS COURSE FILES (his own lecture material: prefer it for study questions and name the file): '+h.slice(0,2).map(x=>'['+x.file+'] '+x.text).join(' … ')).slice(0,3000):'').catch(()=>'')];
@@ -1085,6 +1147,7 @@ document.addEventListener('change',e=>{const t=e.target as HTMLInputElement;
   else if('bargeIn' in t.dataset){const p=sound.prefs();p.bargeIn=t.checked;sound.savePrefs(p);}
   else if('soundSilent' in t.dataset){const p=sound.prefs();p.silent=t.checked;sound.savePrefs(p);if(p.silent)sound.stop('music');}});
 document.addEventListener('click',e=>{if((e.target as HTMLElement).closest('[data-wake-preview]')){void cinematicWake();return;}});
+document.addEventListener('click',e=>{const f=(e.target as HTMLElement).closest<HTMLElement>('[data-open-found]');if(f)void command('file_open_found',{path:f.dataset.openFound}).catch(error=>toast(String(error)));});
 document.addEventListener('click',e=>{const sb=(e.target as HTMLElement).closest<HTMLElement>('[data-sound-test],[data-sound-remove]');
   if(sb){const slot=(sb.dataset.soundTest??sb.dataset.soundRemove) as sound.Slot;if(sb.dataset.soundTest)void sound.play(slot).then(ok=>{if(!ok){if(slot==='activation')sound.synthTone();else toast('No file set for this sound.');}else if(slot==='music')setTimeout(()=>sound.stop('music',1200),6000);});else void run(async()=>{await sound.removeAudio(slot);await refreshSoundNames();});return;}});
 document.addEventListener('click',e=>{const el=(e.target as HTMLElement).closest<HTMLElement>('button,[data-page]');if(!el)return;if(el.dataset.page){go(el.dataset.page);return;}if(el.dataset.suggest){const text=el.dataset.suggest;void run(()=>runUserText(text,e));return;}if(el.dataset.new){editor(el.dataset.new as EntryKind);return;}if(el.dataset.edit){const record=state.records.find(r=>r.id===el.dataset.edit);if(record){editor(record.kind,record);const entity=recordEntities([record])[0];if(entity)conversationContext.observe(entity);}return;}void run(async()=>{
@@ -1191,7 +1254,7 @@ async function init() {
   setInterval(()=>void run(reminders),15000);void run(reminders);
   setInterval(()=>void proactive(),15000);
   // Watchdog: the wake word must always come back after conversations, errors or a sleeping microphone.
-  setInterval(()=>{if(native&&desiredWake&&!voiceMode&&!conversing&&!waking&&aiState==='Ready')void resumeWake().catch(()=>undefined);},15000);setInterval(()=>void sampleWindow(),5000);setTimeout(()=>void greetOnline(),6000);if(native){const indexCourses=()=>void command('courses_index_cmd').catch(()=>undefined);setTimeout(indexCourses,20000);setInterval(indexCourses,15*60000);}
+  setInterval(()=>{if(native&&desiredWake&&!voiceMode&&!conversing&&!waking&&aiState==='Ready')void resumeWake().catch(()=>undefined);},15000);setInterval(()=>void sampleWindow(),5000);setTimeout(()=>void greetOnline(),6000);if(native){const indexCourses=()=>void command('courses_index_cmd').catch(()=>undefined);setTimeout(indexCourses,20000);setInterval(indexCourses,15*60000);setTimeout(()=>void subscriptionReminders(),30000);setInterval(()=>void subscriptionReminders(),3600000);}
   // Minimised or in the tray: freeze all motion so JARVIS costs ~0% CPU in the background.
   document.addEventListener('visibilitychange',()=>document.body.classList.toggle('app-idle',document.hidden));
 }
