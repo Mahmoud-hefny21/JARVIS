@@ -1107,6 +1107,7 @@ fn main() {
             egypt::egypt_rates,
             egypt::egypt_football,
             egypt::quran_verse,
+            egypt::media_key,
             mobile::mobile_reply,
             knowledge::knowledge_search,
             actions::action_prepare,

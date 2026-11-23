@@ -58,6 +58,10 @@ export function timeToEnglish(input: string): string {
     .replace(/(?:^|\s)(?:بكر[ةه]|bokra|bukra|bokrah)(?=$|\s|[.,!؟?])/giu, ' tomorrow')
     .replace(/(?:^|\s)(?:النهارد[ةه]|enharda|ennaharda|naharda|el\s*naharda)(?=$|\s|[.,!؟?])/giu, ' today')
     .replace(/(?:^|\s)(?:today|tomorrow)?\s*(?:بالليل|bel\s*leil|bel\s*lel|belel)(?=$|\s|[.,!؟?])/giu, m => /tomorrow/i.test(m) ? ' tomorrow at 8 pm' : ' tonight');
+  t = t.replace(/(?:^|\s)(?:kol\s+yo+m|kol\s+yum|كل\s+يوم)(?=$|\s|[.,!؟?])/giu, ' every day')
+    .replace(/(?:^|\s)(?:kol\s+esbo3|kol\s+osbo3|كل\s+(?:اسبوع|أسبوع))(?=$|\s|[.,!؟?])/giu, ' every week')
+    .replace(/(?:^|\s)(?:kol\s+shahr|كل\s+شهر)(?=$|\s|[.,!؟?])/giu, ' every month')
+    .replace(/(?:^|\s)(?:kol|كل)\s+(?=(?:يوم\s+)?(?:السبت|الحد|الأحد|الاحد|الاتنين|التلات|الاربع|الخميس|الجمعة|el\s*sabt|el\s*7ad|el\s*etnen|el\s*talat|el\s*arba3|el\s*5amis|el\s*gom3a))/giu, ' every ');
   const days: [RegExp, string][] = [
     [/(?:يوم\s+)?(?:السبت|el\s*sabt|yom\s+el\s*sabt)/giu, 'saturday'], [/(?:يوم\s+)?(?:الحد|الأحد|الاحد|el\s*7ad|yom\s+el\s*7ad)/giu, 'sunday'],
     [/(?:يوم\s+)(?:الاتنين|الإثنين|الاثنين)|yom\s+el\s*etnen|(?:^|\s)الاتنين(?=$|\s)/giu, ' monday'], [/(?:يوم\s+)?(?:التلات|الثلاثاء|el\s*talat)/giu, 'tuesday'],
@@ -92,6 +96,8 @@ export function fixFrancoVerb(input: string): string {
 export const PHRASES: [RegExp, string][] = [
   // Add a task: "7ot task …", "zawed task …", "ضيف مهمة …", "اعمل تاسك …".
   [/^(?:(?:ya |hey )?jarvis[,.!\s]+)?(?:7ot|hot|7ott|zawed|zawwed|zwd|e3mel|a3mel|e3ml|ضيف|زود|حط|اعمل|اعملي)\s+(?:li\s+|ly\s+|لي\s+)?(?:task|tasks|taskk|تاسك|مهمة|مهمه)\s+/iu, 'add task '],
+  // Time first, then the verb: "كل يوم الساعة ٨ فكرني اشرب مية" → "remind me to اشرب مية كل يوم الساعة ٨".
+  [/^(?!remind me)(.{3,60}?)\s+(?:فكرني|فكّرني|ذكرني|fakkarny|fakarny|fakkarni|remind me to)\s+(.{2,200})$/iu, 'remind me to $2 $1'],
   // Finished: "5alast …", "خلصت …".
   [/^(?:(?:ya |hey )?jarvis[,.!\s]+)?(?:5alast|khalast|5lst|5alas|خلصت|انا خلصت)\s+/iu, 'I finished '],
 ];

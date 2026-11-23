@@ -186,6 +186,35 @@ export function localIntent(input: string): { action: string; text?: string } | 
   if(ayah)return {action:'quran',text:ayah[1]+':'+ayah[2]};
   if(/^(?:ayat?(?: el| al)?[ -]?kursi|ayatul kursi|آي[ةه] الكرسي)$/u.test(t))return {action:'quran',text:'2:255'};
   if(/^(?:(?:the |next |upcoming )?(?:holidays?|occasions?)|(?:el )?(?:agazat|agaza el gaya)|(?:when is )?(?:ramadan|eid|the eid|eid al[- ]?(?:fitr|adha)|arafah|ashura|sham el[- ]?nessim)|ramadan emta|el 3eed emta|3eed emta|(?:الاجازات|الأجازات|الإجازات)(?: الجاي[ةه])?|(?:رمضان|العيد|عيد الفطر|عيد الاضحى|عيد الأضحى|شم النسيم)(?: امتى)?)$/u.test(t))return {action:'occasions'};
+  // Shopping list: add, show, clear.
+  const shopAdd=t.match(/^(?:add|put|zawed|zawwed|zwd|7ot|حط|ضيف|زود)\s+(.{1,80}?)\s+(?:to|on|in|3al|3ala|fel|على|علي|ل|لل|في)\s*(?:the |my |el |ال)?(?:shopping list|shopping|list el (?:7agat|shopping)|qaymet el moshtarayat|list|ليست[ةه]|قايم[ةه] المشتريات|قائم[ةه] المشتريات|المشتريات|مشتريات)$/u);
+  if(shopAdd)return {action:'shopping-add',text:shopAdd[1].trim()};
+  if(/^(?:(?:show|read|what's on|whats on)(?: me)? (?:the |my )?shopping list|(?:my |the )?shopping list|e3rdli (?:el )?(?:shopping|list)|(?:qaymet|el) moshtarayat|(?:قايم[ةه]|قائم[ةه]) المشتريات|وريني المشتريات)$/u.test(t))return {action:'shopping-show'};
+  if(/^(?:clear|empty|reset) (?:the |my )?shopping list|i bought (?:it all|everything)|ashtarit kol 7aga|امسح (?:قايم[ةه] )?المشتريات|اشتريت كل حاج[ةه]$/u.test(t))return {action:'shopping-clear'};
+  // Timers and alarms.
+  const timerWords=t.replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+  const timer=/\b(?:timer|ta?ymer)\b|تايمر|مؤقت/u.test(timerWords)&&timerWords.match(/(\d{1,3})\s*(seconds?|secs?|sanya|sawany|ثاني[ةه]|ثواني|minutes?|mins?|d2aye2|da2aye2|da2i2a|de2i2a|da2ay2|دقايق|دقيق[ةه]|دقائق|hours?|sa3a|sa3at|ساع[ةه]|ساعات)/u);
+  if(timer){const unit=/^(?:s|ث)/u.test(timer[2])?1:/^(?:h|sa3|ساع)/u.test(timer[2])?3600:60;const name=timerWords.replace(timer[0],'').replace(/\b(?:set|start|a|an|for|timer|taymer|tymer|e3mel|a3mel|ely|el)\b|تايمر|مؤقت|اعمل|لـ?|على/gu,'').replace(/\s+/g,' ').trim();return {action:'timer',text:JSON.stringify({seconds:Number(timer[1])*unit,name:name.slice(0,40)})};}
+  const alarm=t.match(/^(?:wake me up|set an alarm|alarm|sa7+eeny|sa7+eny|sa7any|sa7eny|صحيني|صحّيني|اعمل منب[هة]|منب[هة])(?=\s|$)\s*(?:at|for|el sa3a|الساع[ةه])?\s*(.{1,40})$/u);
+  if(alarm)return {action:'alarm',text:alarm[1].trim()};
+  if(/^(?:(?:cancel|stop|delete|turn off) (?:the |my |all )?(?:timers?|alarms?)|(?:el8y|elghy|2fel|e2fel) el (?:timer|alarm|monabeh)|(?:الغي|إلغي|اقفل|وقف) (?:التايمر|المنب[هة]))$/u.test(t))return {action:'timer-cancel'};
+  // Media and volume (Windows media keys).
+  if(/^(?:pause|play|resume|pause (?:the )?(?:music|song|video)|play (?:the )?music|resume (?:the )?music|wa2+af el (?:aghnya|aghneya|music|mazzika)|wa2+af|kamel el music|وقف (?:الأغني[ةه]|الاغني[ةه]|المزيكا|الموسيقى)|شغل المزيكا|كمل)$/u.test(t))return {action:'media',text:'playpause'};
+  if(/^(?:next|skip|next (?:song|track)|skip (?:this )?(?:song|track)|elly ba3do|el aghnya elly ba3daha|اللي بعده|الأغني[ةه] اللي بعدها|التالي)$/u.test(t))return {action:'media',text:'next'};
+  if(/^(?:previous|previous (?:song|track)|last (?:song|track)|elly 2ablo|اللي قبله|الأغني[ةه] اللي قبلها)$/u.test(t))return {action:'media',text:'previous'};
+  const vol=t.match(/^(?:(?:set (?:the )?)?volume(?: to)?|(?:el )?sot|الصوت)\s*(\d{1,3})\s*%?$/u);
+  if(vol)return {action:'volume',text:String(Math.min(100,Number(vol[1])))};
+  if(/^(?:volume up|louder|turn (?:it |the volume )?up|3al+y el sot|3ly el sot|ارفع الصوت|علي الصوت|على الصوت|عل[يى] الصوت)$/u.test(t))return {action:'volume',text:'up'};
+  if(/^(?:volume down|quieter|turn (?:it |the volume )?down|wat+y el sot|wa6y el sot|wa6+i el sot|وطي الصوت|اخفض الصوت|قلل الصوت)$/u.test(t))return {action:'volume',text:'down'};
+  if(/^(?:mute (?:the )?(?:pc|computer|laptop|sound|volume|speakers)|ekt[e]?m el sot|اكتم الصوت|اقفل الصوت)$/u.test(t))return {action:'volume',text:'mute'};
+  // Quick notes.
+  const note=text.match(/^(?:note|take a note|note that|write down|sagel|sagal|seggel|ekteb|ektb|سجل|سجّل|اكتب|دون)(?:\s+(?:en|that|ان|إن|ملاحظ[ةه]|note))?\s+(.{2,500})$/iu);
+  if(note)return {action:'remember',text:note[1].trim()};
+  // Routines.
+  if(/^(?:good ?night(?:,? jarvis)?|night jarvis|tesba7 (?:3ala|3la|ala) (?:5eer|khir|khair|5er)|ana hanam|تصبح على خير|انا هنام|أنا هنام)$/u.test(t))return {action:'goodnight'};
+  const focus=t.replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).match(/^(?:study time|start studying|focus(?: mode)?|focus for|wa2t el mozakra|ha?zaker|هذاكر|وقت المذاكر[ةه]|ركز)(?:\s+(?:for\s+)?(\d{1,3})\s*(?:minutes?|mins?|d2aye2|da2aye2|دقيق[ةه]|دقايق))?$/u);
+  if(focus)return {action:'focus',text:String(Number(focus[1]??45))};
+  if(/^(?:stop focus(?:ing)?|end focus|focus off|khalas mozakra|خلصت مذاكر[ةه])$/u.test(t))return {action:'focus-end'};
   // "Show me anything": English, Franco-Arabic and Arabic. Specific show-commands above win first.
   const show=text.match(/^(?:show(?: me)?|display|put up|pull up|bring up|(?:can you |could you )?show me|let me see|e3redli|e3rdli|e3rdly|3rdli|3rdly|warini|wareeni|wareny|warrini|وريني|ورّيني|اعرض(?:لي|ي لي)?|اعرضلي|عرضلي)\s+(?:(?:about|on|a|an|the)\s+)?([^\r\n]{2,200})$/iu);
   if(show&&!/[\u0000-\u001f\u007f]/.test(show[1]))return {action:'show',text:show[1].trim().replace(/[.!?؟]+$/u,'').replace(/\s+(?:on (?:the |my )?screen|please|for me|ala el screen|3al screen|على الشاشة)$/iu,'')};
@@ -228,7 +257,7 @@ export function monitorIndex(target: string, count: number): number | null {
 
 const WEEKDAYS=['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
 /** Splits a spoken task into a clean title and an optional due time ("buy milk tomorrow at 9" -> "Buy milk", tomorrow 09:00). */
-export function parseTaskWhen(input: string, now = new Date()): { title: string; dueAt?: string } {
+export function parseTaskWhen(input: string, now = new Date()): { title: string; dueAt?: string; recurrence?: 'daily' | 'weekly' | 'monthly' } {
   // Speech-to-text writes small numbers as words ("in two minutes", "half an hour").
   const NUMBERS: Record<string, string> = { a: '1', an: '1', one: '1', two: '2', three: '3', four: '4', five: '5', six: '6', seven: '7', eight: '8', nine: '9', ten: '10', fifteen: '15', twenty: '20', thirty: '30', forty: '40', 'forty five': '45', fifty: '50' };
   let text = timeToEnglish(input).trim().replace(/[.!?،؟]+$/u, '')
@@ -236,6 +265,10 @@ export function parseTaskWhen(input: string, now = new Date()): { title: string;
     .replace(/\bin (a|an|one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|forty five|forty|fifty) (minute|minutes|min|hour|hours)\b/i, (_, n: string, unit: string) => `in ${NUMBERS[n.toLowerCase()]} ${unit}`)
     .replace(/\bat (one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b/i, (_, n: string) => `at ${({ eleven: '11', twelve: '12' } as Record<string, string>)[n.toLowerCase()] ?? NUMBERS[n.toLowerCase()]}`);
   let day: Date | null = null, hour: number | null = null, minute = 0;
+  // Repetition: "every day", "every week", "every month", "every sunday" (weekday handled below as the first day).
+  let recurrence: 'daily' | 'weekly' | 'monthly' | undefined;
+  { const r = text.match(/\b(?:every ?day|daily|each day)\b|\bevery (?:week|weekly)\b|\bweekly\b|\bevery month\b|\bmonthly\b|\bevery (?=(?:sun|mon|tues|wednes|thurs|fri|satur)day\b)/i);
+    if (r) { recurrence = /day|daily/i.test(r[0]) && !/every (?=\w+day)/i.test(r[0]) ? 'daily' : /month/i.test(r[0]) ? 'monthly' : 'weekly'; text = (text.slice(0, r.index) + ' ' + text.slice(r.index! + r[0].length)).replace(/\s+/g, ' ').trim(); } }
   const take = (re: RegExp) => { const m = text.match(re); if (m) text = (text.slice(0, m.index) + ' ' + text.slice(m.index! + m[0].length)).replace(/\s+/g, ' ').trim(); return m; };
   let m = take(/\bin (\d{1,3}) (minute|minutes|min|hour|hours)\b/i);
   if (m) { const d = new Date(now.getTime() + Number(m[1]) * (m[2].startsWith('h') ? 3600000 : 60000)); return { title: tidy(text), dueAt: d.toISOString() }; }
@@ -253,9 +286,10 @@ export function parseTaskWhen(input: string, now = new Date()): { title: string;
     if (!m[3] && hour < 8) hour += 12; // "at 5" means 5 pm for everyday tasks
     if (!day) { day = new Date(now); day.setHours(hour, minute, 0, 0); if (day <= now) day.setDate(day.getDate() + 1); }
   }
+  if (!day && recurrence) { day = new Date(now); day.setHours(hour ?? 9, minute, 0, 0); if (day <= now) day.setDate(day.getDate() + (recurrence === 'weekly' ? 7 : 1)); }
   if (!day) return { title: tidy(text) };
   day.setHours(hour ?? 9, minute, 0, 0);
-  return { title: tidy(text), dueAt: day.toISOString() };
+  return { title: tidy(text), dueAt: day.toISOString(), ...(recurrence ? { recurrence } : {}) };
 }
 function tidy(text: string) { const t = text.replace(/\s+(on|at|by)$/i, '').trim(); return t.charAt(0).toUpperCase() + t.slice(1); }
 

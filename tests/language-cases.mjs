@@ -39,6 +39,14 @@ export const COMMANDS = [
   ['quran 94:5', 'quran', '94:5'], ['ayah 2 255', 'quran', '2:255'], ['ayat el kursi', 'quran', '2:255'], ['آية الكرسي', 'quran', '2:255'],
   ['egypt match', 'football'], ['match masr emta', 'football'], ['ماتش مصر امتى', 'football'], ['el montakhab kam kam', 'football'], ['when is egypt next match', 'football'],
   ['holidays', 'occasions'], ['ramadan emta', 'occasions'], ['رمضان امتى', 'occasions'], ['el 3eed emta', 'occasions'], ['العيد امتى', 'occasions'], ['when is eid al adha', 'occasions'], ['الاجازات', 'occasions'], ['شم النسيم امتى', 'occasions'],
+  // Daily life: timers, alarms, media, volume, notes, shopping list, routines
+  ['pasta timer 10 minutes', 'timer', '600'], ['e3mel timer 5 da2aye2', 'timer', '300'], ['اعمل تايمر ١٠ دقايق', 'timer', '600'], ['set a timer for 30 seconds', 'timer', '30'],
+  ['sa7eeny 7', 'alarm', '7'], ['صحيني الساعة سبعة الصبح', 'alarm', 'سبعة'], ['wake me up at 6:30', 'alarm', '6:30'], ['cancel the timer', 'timer-cancel'], ['الغي المنبه', 'timer-cancel'],
+  ['pause', 'media', 'playpause'], ['wa22af el aghnya', 'media', 'playpause'], ['next song', 'media', 'next'], ['اللي بعده', 'media', 'next'], ['previous song', 'media', 'previous'],
+  ['volume 30', 'volume', '30'], ['وطي الصوت', 'volume', 'down'], ['3ally el sot', 'volume', 'up'], ['mute the pc', 'volume', 'mute'],
+  ['sagel en el locker code 42', 'remember', 'locker code 42'], ['note that the wifi password is on the router', 'remember', 'wifi password'], ['اكتب ان الاجتماع اتأجل', 'remember', 'الاجتماع'],
+  ['zawed beyd 3al list', 'shopping-add', 'beyd'], ['add milk to my shopping list', 'shopping-add', 'milk'], ['ضيف عيش للمشتريات', 'shopping-add', 'عيش'], ['show my shopping list', 'shopping-show'], ['clear shopping list', 'shopping-clear'],
+  ['good night', 'goodnight'], ['tesba7 3ala 5eer', 'goodnight'], ['تصبح على خير', 'goodnight'], ['study time', 'focus', '45'], ['focus 25 minutes', 'focus', '25'], ['stop focus', 'focus-end'],
   // Close the card
   ['close the display', 'show-close'], ['e2fel el screen', 'show-close'], ['hide it', 'show-close'], ['اقفل الشاشة', 'show-close'],
   // Tasks
@@ -87,4 +95,7 @@ export const REMINDERS = [
   ['fakkarny el meeting bokra el sa3a 3 el 3asr', 'meeting', [1, 15, 0]],
   ['remind me to pray at 12:30 pm tomorrow', 'pray', [1, 12, 30]],
   ['fakkarny bel lecture bokra el sa3a 9 w nos el sob7', 'lecture', [1, 9, 30]],
+  ['كل يوم الساعة ٨ الصبح فكرني اشرب مية', 'اشرب مية', [1, 8, 0]],
+  ['bokra el sa3a 5 fakkarny akalem ahmed', 'akalem ahmed', [1, 17, 0]],
+  ['remind me to take my medicine every day at 9pm', 'medicine', [0, 21, 0]],
 ];

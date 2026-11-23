@@ -3,6 +3,7 @@ import './overview.css';
 import './polish.css';
 setTimeout(()=>document.body.classList.add('hud-booted'),1500);
 import { listen } from '@tauri-apps/api/event';
+import { timeToEnglish } from '../../../packages/shared/vocabulary';
 import { prayerTimes, nextPrayer, qibla, hijri, PRAYERS, upcomingOccasions } from '../../../packages/shared/prayer';
 import { createEntry, Entry, EntryKind, localInsight, localIntent, wantsEgyptianArabic, parseTaskWhen, matchTask, headsUp, onlineGreeting, translateCommandWords, monitorIndex, nextDue, quiet, shouldSpeakResponse, voiceStopRecovery, shouldRetryWithWhisper, shouldUseWhisperForDictation, spokenFailureMessage, SettingsSchema, WeatherSchema, WorkspacePresetSchema, OverviewPanelId } from '../../../packages/shared/model';
 import { command, native, ProjectInfo, SecurityStatus, Telemetry, Tool, UserTask, withUserTask, cancelUserTasks } from './bridge';
@@ -493,7 +494,7 @@ async function answer(input:string,task?:UserTask,directVoiceRequest=false) {
       if(!hit)response=open.length?`I couldn’t find that one. Your open tasks: ${open.slice(0,5).map(t=>t.title).join(', ')}.`:'Your task list is already empty.';
       else if(intent.action==='task-delete'){await state.remove(hit.id,task);response=`Deleted “${hit.title}”.`;}
       else{await state.put({...hit,done:true},task);response=`Nice. “${hit.title}” is done.`;}}
-    else if(intent?.action==='task'){const when=parseTaskWhen(intent.text!);const saved=await state.add('task',{title:when.title.slice(0,240),...(when.dueAt?{dueAt:when.dueAt}:{})},task);conversationContext.observe(recordEntities([saved])[0]);response=`${ack()} “${when.title.slice(0,120)}”${when.dueAt?' for '+new Date(when.dueAt).toLocaleString([],{weekday:'long',hour:'numeric',minute:'2-digit'}):''} is on your list.`;}
+    else if(intent?.action==='task'){const when=parseTaskWhen(intent.text!);const saved=await state.add('task',{title:when.title.slice(0,240),...(when.dueAt?{dueAt:when.dueAt}:{}),...(when.recurrence?{recurrence:when.recurrence}:{})},task);conversationContext.observe(recordEntities([saved])[0]);response=`${ack()} “${when.title.slice(0,120)}”${when.dueAt?' for '+new Date(when.dueAt).toLocaleString([],{weekday:'long',hour:'numeric',minute:'2-digit'}):''} is on your list${when.recurrence?', every '+({daily:'day',weekly:'week',monthly:'month'} as Record<string,string>)[when.recurrence]:''}.`;}
     else if(intent?.action==='recall'){const words=intent.text!.toLowerCase().split(/\s+/).filter(w=>w.length>2);const memories=native?await command<Entry[]>('memory_search',{query:intent.text!}):state.list('memory').filter(m=>words.some(w=>`${m.title} ${m.body}`.toLowerCase().includes(w)));response=memories.length?memories.slice(0,6).map(m=>m.title+(m.body!==m.title?'\n'+m.body:'')).join('\n\n'):'I don’t have anything on that yet.';}
     else if(intent?.action==='browser-read'){if(!native)throw new Error('Active browser reading is available only in the Windows desktop app.');response=await command<string>('browser_page_read');if(!response.trim())throw new Error('No readable text was exposed by the active browser page.');response='Text read locally from the open browser page (not sent to an AI provider):\n\n'+response.slice(0,20000);}
     else if(intent?.action==='browser-scroll'){if(!native)throw new Error('Active browser scrolling is available only in the Windows desktop app.');const result=await command<{direction:string;verified:boolean}>('browser_page_scroll',{direction:intent.text});if(result.verified!==true||result.direction!==intent.text)throw new Error('The browser page did not confirm scrolling.');response=`Scrolled the active browser page ${result.direction}.`;}
@@ -559,6 +560,28 @@ async function answer(input:string,task?:UserTask,directVoiceRequest=false) {
       fillDisplay('Holidays and occasions','<ul class="dsp-list">'+list.map(o=>'<li><b>'+esc(o.en)+' <span dir="rtl">'+esc(o.ar)+'</span></b><span>'+day(o.date)+(o.kind==='islamic'?' · expected':'')+'</span></li>').join('')+'</ul><p class="dsp-empty">Islamic dates from the Umm al-Qura calendar; Egypt can differ by a day after the moon sighting.</p>');
       const days=Math.round((wanted.date.getTime()-new Date(new Date().toDateString()).getTime())/86400000);
       response=ar?wanted.ar+' متوقع يوم '+wanted.date.toLocaleDateString('ar-EG',{weekday:'long',day:'numeric',month:'long'})+'، بعد '+days+' يوم يا فندم.':(wanted.en.endsWith(' begins')?wanted.en.replace(/ begins$/,'')+' is expected to begin on ':wanted.en+' is expected on ')+day(wanted.date)+', in '+days+' days, sir.';}
+    else if(intent?.action==='timer'){const t=JSON.parse(intent.text!) as {seconds:number;name:string};const at=Date.now()+t.seconds*1000;addClock({id:crypto.randomUUID(),kind:'timer',at,name:t.name});const span=t.seconds>=3600?Math.round(t.seconds/360)/10+' hours':t.seconds>=60?Math.round(t.seconds/60)+' minutes':t.seconds+' seconds';
+      response=wantsEgyptianArabic(input)?'تمام يا فندم، التايمر شغال '+(t.seconds>=60?Math.round(t.seconds/60)+' دقيقة':t.seconds+' ثانية')+'.':(t.name?'Your '+t.name+' timer is set for '+span+', sir.':'Timer set for '+span+', sir.');}
+    else if(intent?.action==='alarm'){const spec=timeToEnglish('الساعة '+intent.text!.replace(/^(?:at|el sa3a|الساع[ةه])\s*/iu,''));const m=spec.match(/at (\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);if(!m)throw new Error('Tell me the time, sir. For example: wake me up at 7.');
+      let h=Number(m[1])%24;const min=Number(m[2]??0);if(m[3]?.toLowerCase()==='pm'&&h<12)h+=12;if(m[3]?.toLowerCase()==='am'&&h===12)h=0;const d=new Date();d.setHours(h,min,0,0);if(d.getTime()<=Date.now())d.setDate(d.getDate()+1);
+      addClock({id:crypto.randomUUID(),kind:'alarm',at:d.getTime(),name:''});const when=d.toLocaleString([],{weekday:'long',hour:'numeric',minute:'2-digit'});
+      response=wantsEgyptianArabic(input)?'حاضر يا فندم، هصحيك '+d.toLocaleString('ar-EG',{weekday:'long',hour:'numeric',minute:'2-digit'})+'.':'Alarm set for '+when+', sir.';}
+    else if(intent?.action==='timer-cancel'){const n=clocks.length;clocks=[];saveClocks();stopRinging();response=n?(wantsEgyptianArabic(input)?'لغيت التايمر والمنبه يا فندم.':'Cancelled, sir.'):(wantsEgyptianArabic(input)?'مفيش تايمر شغال يا فندم.':'There\'s no timer or alarm running, sir.');}
+    else if(intent?.action==='media'){stopRinging();await command('media_key',{key:intent.text});response='';}
+    else if(intent?.action==='volume'){if(/^\d+$/.test(intent.text!))await command('media_key',{key:'set',level:Number(intent.text)});else await command('media_key',{key:intent.text});response=/^\d+$/.test(intent.text!)?'Volume '+intent.text+'%, sir.':'';}
+    else if(intent?.action==='shopping-add'){const list=shoppingList();const items=intent.text!.split(/\s*(?:,|\band\b|\bw\b|و)\s*/u).map(x=>x.trim()).filter(Boolean);await saveShopping([...list,...items.filter(i=>!list.includes(i))],task);
+      response=wantsEgyptianArabic(input)?'ضفت '+items.join(' و')+' للقايمة يا فندم.':'Added '+items.join(' and ')+' to your shopping list, sir.';}
+    else if(intent?.action==='shopping-show'){const list=shoppingList();fillDisplay('Shopping list',list.length?'<ul class="dsp-list">'+list.map(i=>'<li><b>'+esc(i)+'</b></li>').join('')+'</ul>':'<p class="dsp-empty">Your shopping list is empty, sir.</p>');
+      response=list.length?(wantsEgyptianArabic(input)?'في القايمة: '+list.join('، ')+'.':'On your list: '+list.join(', ')+'.'):(wantsEgyptianArabic(input)?'القايمة فاضية يا فندم.':'Your shopping list is empty, sir.');}
+    else if(intent?.action==='shopping-clear'){await saveShopping([],task);response=wantsEgyptianArabic(input)?'مسحت القايمة يا فندم.':'Shopping list cleared, sir.';}
+    else if(intent?.action==='goodnight'){const tmr=new Date();tmr.setDate(tmr.getDate()+1);const ds=tmr.toDateString();const tasks=state.list('task').filter(t=>!t.done&&t.dueAt&&new Date(t.dueAt).toDateString()===ds);const events=state.list('event').filter(e=>e.dueAt&&new Date(e.dueAt).toDateString()===ds);
+      const fajr=prayerTimes(tmr,state.settings.latitude,state.settings.longitude).fajr.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});const alarm=clocks.find(c=>c.kind==='alarm');
+      fillDisplay('Tomorrow','<ul class="dsp-list">'+[...events.map(e=>'<li><b>'+esc(e.title)+'</b><span>'+new Date(e.dueAt).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+'</span></li>'),...tasks.map(t=>'<li><b>'+esc(t.title)+'</b><span>'+new Date(t.dueAt).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+'</span></li>')].join('')+'</ul><p class="dsp-empty">Fajr '+fajr+(alarm?' · alarm '+new Date(alarm.at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):' · no alarm set')+'</p>');
+      prayerQuietUntil=Math.max(prayerQuietUntil,Date.now()+30*60000);
+      const count=tasks.length+events.length;response=wantsEgyptianArabic(input)?'تصبح على خير يا فندم. بكرة عندك '+(count?count+' حاجات':'يوم فاضي')+'، والفجر الساعة '+fajr+(alarm?'، والمنبه الساعة '+new Date(alarm.at).toLocaleTimeString('ar-EG',{hour:'numeric',minute:'2-digit'}):'')+'.':'Good night, sir. Tomorrow you have '+(count?count+' thing'+(count>1?'s':''):'a free day')+'; Fajr is at '+fajr+(alarm?' and your alarm is set for '+new Date(alarm.at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'')+'.';}
+    else if(intent?.action==='focus'){const mins=Math.max(5,Math.min(240,Number(intent.text)));focusUntil=Date.now()+mins*60000;addClock({id:crypto.randomUUID(),kind:'timer',at:focusUntil,name:'focus'});prayerQuietUntil=Math.max(prayerQuietUntil,focusUntil);
+      response=wantsEgyptianArabic(input)?'تمام يا فندم، '+mins+' دقيقة تركيز. مش هقاطعك غير للصلاة والمنبه.':'Focus for '+mins+' minutes, sir. I\'ll stay quiet except for prayer and alarms.';}
+    else if(intent?.action==='focus-end'){focusUntil=0;prayerQuietUntil=Date.now();clocks=clocks.filter(c=>c.name!=='focus');saveClocks();response=wantsEgyptianArabic(input)?'خلصنا التركيز يا فندم.':'Focus ended, sir.';}
     else if(intent?.action==='show')response=await showOnScreen(intent.text!);
     else if(intent?.action==='show-close'){closeDisplay();response='Cleared, sir.';}
     else if(intent){await performAction(intent.action,task);response='The Windows action was accepted. Disruptive actions require your confirmation.';}
@@ -614,6 +637,25 @@ let hotCpu=0;
 // On-screen display: "show me <anything>" fills a holographic card. The owner's own data comes from local records;
 // anything else combines a free Wikipedia summary/image with an AI-written breakdown. Nothing here is fixed content.
 type WikiResult={title:string;description?:string;extract?:string;image?:string|null;url?:string};
+// Timers and alarms: kept on this PC so they survive a restart; when due, a sound, a spoken line, a card and the phone.
+type Clock={id:string;kind:'timer'|'alarm';at:number;name:string};
+const CLOCKS_KEY='jarvis-clocks-v1';
+let clocks:Clock[]=(()=>{try{return (JSON.parse(localStorage.getItem(CLOCKS_KEY)??'[]') as Clock[]).filter(c=>c.at>Date.now()-3600000);}catch{return [];}})();
+let focusUntil=0,ringing:ReturnType<typeof setInterval>|undefined;
+function saveClocks(){try{localStorage.setItem(CLOCKS_KEY,JSON.stringify(clocks));}catch{}}
+function addClock(c:Clock){clocks=[...clocks,c].sort((a,b)=>a.at-b.at);saveClocks();}
+function stopRinging(){if(ringing){clearInterval(ringing);ringing=undefined;}sound.stop('music',300);}
+async function clockTick(){const due=clocks.filter(c=>c.at<=Date.now());if(!due.length)return;clocks=clocks.filter(c=>c.at>Date.now());saveClocks();
+  for(const c of due){const late=Date.now()-c.at>10*60000;
+    if(c.kind==='alarm'){const text='Good morning, sir. It\'s '+new Date(c.at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+'.';hudAlert(text);void command('push_notify',{title:'Alarm',body:text}).catch(()=>{});
+      if(!late){if(!(await sound.play('music',{fadeInMs:4000,loop:true})))ringing=setInterval(()=>void sound.play('notify'),4000);setTimeout(stopRinging,5*60000);if(native)await speak(text).catch(()=>{});}}
+    else{const text=c.name==='focus'?'Focus time is over, sir. Take a short break.':c.name?'Your '+c.name+' timer is done, sir.':'Time\'s up, sir.';if(c.name==='focus')focusUntil=0;hudAlert(text);void command('push_notify',{title:c.name==='focus'?'Focus done':'Timer done',body:text}).catch(()=>{});
+      if(!late){await sound.play('notify');if(native)await speak(text).catch(()=>{});}}}}
+setInterval(()=>void clockTick(),1000);
+// Shopping list: one saved note, so it lives in JARVIS's database with everything else.
+function shoppingRecord(){return state.list('memory').find(m=>m.title==='Shopping list');}
+function shoppingList():string[]{return (shoppingRecord()?.body??'').split('\n').map(x=>x.trim()).filter(Boolean);}
+async function saveShopping(items:string[],task?:UserTask){const rec=shoppingRecord();const body=items.join('\n').slice(0,4000);if(rec)await state.put({...rec,body},task);else await state.add('memory',{title:'Shopping list',body},task);}
 type Rates={usd:number;eur:number|null;sar:number|null;aed:number|null;gold24:number|null;gold21:number|null;gold18:number|null;goldOunceUsd:number|null;updated?:string};
 type Match={id:string;title:string;home:string;away:string;homeScore:string|null;awayScore:string|null;league?:string;date?:string;time?:string;timestamp?:string;status?:string};
 type Verse={surah:number;ayah:number;surahAr:string;surahEn:string;arabic:string;english:string;tafsir:string};

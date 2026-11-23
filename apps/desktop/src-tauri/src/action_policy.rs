@@ -53,6 +53,11 @@ pub fn routine(action: &str, args: &Value, before: &str) -> Option<String> {
                 return Some(format!("new:{kind}"));
             }
             let old: Value = serde_json::from_str(before).ok()?;
+            // The shopping list note: adding to or clearing its lines is routine (nothing else about it may change).
+            // Same note (id), still a memory titled "Shopping list"; other stored metadata may differ by defaults.
+            if kind == "memory" && old["kind"] == "memory" && old["title"] == "Shopping list" && new["title"] == "Shopping list" {
+                return (old["id"] == new["id"]).then(|| "shopping-list".into());
+            }
             let safe = [
                 "done",
                 "priority",

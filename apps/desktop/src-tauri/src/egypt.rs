@@ -91,3 +91,35 @@ pub async fn egypt_football(event_id: Option<String>) -> Result<Value> {
 pub async fn quran_verse(surah: u32, ayah: u32) -> Result<Value> {
     tauri::async_runtime::spawn_blocking(move || quran_ayah(surah, ayah)).await.map_err(|_| "Quran unavailable".to_string())?
 }
+
+/// Windows media and volume keys (works with Spotify, YouTube, any player). Volume steps are 2% each.
+#[tauri::command]
+pub fn media_key(key: String, level: Option<u32>) -> Result<()> {
+    use windows_sys::Win32::UI::Input::KeyboardAndMouse::{keybd_event, KEYEVENTF_KEYUP};
+    let press = |vk: u8, times: u32| {
+        for _ in 0..times {
+            // SAFETY: synthesizes a standard virtual-key press and release.
+            unsafe {
+                keybd_event(vk, 0, 0, 0);
+                keybd_event(vk, 0, KEYEVENTF_KEYUP, 0);
+            }
+        }
+    };
+    const PLAY_PAUSE: u8 = 0xB3; const NEXT: u8 = 0xB0; const PREVIOUS: u8 = 0xB1;
+    const MUTE: u8 = 0xAD; const DOWN: u8 = 0xAE; const UP: u8 = 0xAF;
+    match key.as_str() {
+        "playpause" => press(PLAY_PAUSE, 1),
+        "next" => press(NEXT, 1),
+        "previous" => press(PREVIOUS, 1),
+        "mute" => press(MUTE, 1),
+        "up" => press(UP, 5),
+        "down" => press(DOWN, 5),
+        "set" => {
+            let level = level.unwrap_or(50).min(100);
+            press(DOWN, 50);
+            press(UP, (level + 1) / 2);
+        }
+        _ => return Err("Unknown media key".into()),
+    }
+    Ok(())
+}
