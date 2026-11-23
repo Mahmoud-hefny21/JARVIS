@@ -53,6 +53,9 @@ export const COMMANDS = [
   ['what does ubiquitous mean', 'define', 'ubiquitous'], ['ya3ni eh algorithm', 'define', 'algorithm'], ['يعني ايه خوارزمية', 'define', 'خوارزمية'], ['define entropy', 'define', 'entropy'],
   ['gpa A 3, B+ 3, A- 2', 'gpa', 'A 3'], ['calculate my gpa A 3 B 4', 'gpa', 'A 3'],
   ['my math exam is on January 10', 'exam', 'math'], ['networks final is on next sunday', 'exam', 'networks'], ['امتحان الفيزيا يوم الخميس', 'exam', 'الفيزيا'],
+  // Privacy and memory
+  ['go private', 'private-on'], ['وضع خاص', 'private-on'], ['private off', 'private-off'], ['forget that', 'forget-last'], ['ensa da', 'forget-last'], ['انسى ده', 'forget-last'],
+  ['what do you know about me', 'about-me'], ['انت تعرف عني ايه', 'about-me'], ['enta 3aref eh 3anny', 'about-me'],
   // Close the card
   ['close the display', 'show-close'], ['e2fel el screen', 'show-close'], ['hide it', 'show-close'], ['اقفل الشاشة', 'show-close'],
   // Tasks

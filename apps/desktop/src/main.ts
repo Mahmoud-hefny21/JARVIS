@@ -164,6 +164,8 @@ function voiceLog(stage:string){void state.activity('Voice: '+stage,new Date().t
 // Commands the AI may run on the user's behalf after understanding free speech (all reversible or allowlisted).
 const AUTO_ACTIONS=new Set(['unmute','mute','site','working-on','wake','pod','task','task-delete','task-done','remember','recall','app-window','monitor','chrome','vscode','briefing','status','preference']);
 let pendingAction='';
+// Private mode: no listening and no window awareness until Mahmoud turns it off (kept across restarts).
+let privateMode=(()=>{try{return localStorage.getItem('jarvis-private')==='1';}catch{return false;}})();
 // Learning from Mahmoud: when the brain works out which command a new phrasing means, the phrasing is saved here and
 // runs instantly next time without the brain. Per-PC convenience cache (rebuilds itself), capped at 400 phrases.
 const LEARNED_KEY='jarvis-learned-phrases-v1';
@@ -371,7 +373,7 @@ function flashPod(kind:string){if(page!=='hud')return;const el=document.querySel
 const windowLog:{app:string;title:string;since:number;last:number}[]=[];let windowSampleFailed=false;
 const APP_NAMES:Record<string,string>={chrome:'Chrome',code:'VS Code',msedge:'Edge',firefox:'Firefox',explorer:'File Explorer',winword:'Word',excel:'Excel',powerpnt:'PowerPoint',spotify:'Spotify',discord:'Discord',whatsapp:'WhatsApp',windowsterminal:'Terminal',powershell:'PowerShell',cmd:'Command Prompt',notepad:'Notepad',acrord32:'Acrobat Reader',teams:'Teams',zoom:'Zoom',figma:'Figma',claude:'Claude'};
 const appName=(app:string)=>APP_NAMES[app.toLowerCase()]??app;
-async function sampleWindow(){if(!native)return;try{const w=await command<{title:string;app:string}|null>('active_window');if(!w)return;const now=Date.now(),top=windowLog[windowLog.length-1];
+async function sampleWindow(){if(!native||privateMode)return;try{const w=await command<{title:string;app:string}|null>('active_window');if(!w)return;const now=Date.now(),top=windowLog[windowLog.length-1];
   if(top&&top.app===w.app&&top.title===w.title)top.last=now;else{windowLog.push({app:w.app,title:w.title,since:now,last:now});if(windowLog.length>30)windowLog.shift();}}catch(error){if(!windowSampleFailed){windowSampleFailed=true;void state.activity('Window awareness unavailable',String(error).slice(0,200));}}}
 function cleanTitle(e:{app:string;title:string}){const name=appName(e.app);return e.title.replace(new RegExp('\\s*[-—|]\\s*(Google Chrome|Visual Studio Code|Microsoft​? Edge|Mozilla Firefox)$','i'),'').replace(/\s*-\s*Personal\s*-\s*Microsoft.*$/i,'')||name;}
 function workingOn(){const now=Date.now();if(!windowLog.length)return native?'I haven’t seen any other window yet this session, sir.':'Window awareness needs the installed Windows app.';
@@ -609,6 +611,15 @@ async function answer(input:string,task?:UserTask,directVoiceRequest=false) {
       await state.add('event',{title:subject+' exam',dueAt:at.toISOString()},task);
       for(const days of [7,3,1]){const r=new Date(at.getTime()-days*86400000);r.setHours(18,0,0,0);if(r.getTime()>Date.now())await state.add('task',{title:'Study for '+subject+' ('+days+' day'+(days>1?'s':'')+' left)',dueAt:r.toISOString()},task);}
       response=wantsEgyptianArabic(input)?'سجلت امتحان '+subject+' يوم '+at.toLocaleDateString('ar-EG',{weekday:'long',day:'numeric',month:'long'})+'، وهفكرك قبلها بأسبوع و٣ أيام ويوم يا فندم.':'Saved your '+subject+' exam on '+at.toLocaleDateString([],{weekday:'long',day:'numeric',month:'long'})+'. I\'ll remind you 7, 3 and 1 days before, sir.';}
+    else if(intent?.action==='private-on'){privateMode=true;try{localStorage.setItem('jarvis-private','1');}catch{}windowLog.length=0;if(desiredWake)await stopVoice(false);
+      response=wantsEgyptianArabic(input)?'الوضع الخاص شغال يا فندم. مش بسمع ومش بتابع الشبابيك. اكتب "private off" لما تحب ترجعني.':'Private mode is on, sir. I\'ve stopped listening and stopped watching windows. Type “private off” when you want me back.';}
+    else if(intent?.action==='private-off'){privateMode=false;try{localStorage.removeItem('jarvis-private');}catch{}if(state.settings.wakeWordEnabled&&!desiredWake){desiredWake=true;await resumeWake().catch(()=>{});}
+      response=wantsEgyptianArabic(input)?'رجعت يا فندم، سامعك.':'I\'m back, sir. Listening again.';}
+    else if(intent?.action==='forget-last'){const last=state.list('memory').filter(m=>m.title!=='Shopping list').sort((a,b)=>b.createdAt.localeCompare(a.createdAt))[0];if(!last)response=wantsEgyptianArabic(input)?'مفيش حاجة محفوظة أنساها يا فندم.':'There\'s nothing saved to forget, sir.';
+      else{await state.remove(last.id,task);response=wantsEgyptianArabic(input)?'نسيت "'+last.title.slice(0,60)+'" يا فندم.':'Forgotten: “'+last.title.slice(0,60)+'”, sir.';}}
+    else if(intent?.action==='about-me'){const s=state.settings,prefs=state.list('memory').filter(m=>/^Preference:/.test(m.title)).slice(0,8),learned=Object.keys(learnedPhrases()).length;
+      fillDisplay('What I know about you','<table><tbody><tr><th>Name</th><td>'+esc(s.name)+' (I call you sir)</td></tr><tr><th>About</th><td>'+esc(s.role)+'</td></tr><tr><th>Home</th><td>'+esc(s.location)+'</td></tr><tr><th>Interests</th><td>'+esc(s.interests)+'</td></tr><tr><th>Prayer</th><td>Egyptian General Authority of Survey method'+(s.prayerReminders!==false?', reminders on':'')+'</td></tr><tr><th>Phrases I learned from you</th><td>'+learned+'</td></tr></tbody></table>'+(prefs.length?'<h3>Your preferences</h3><ul>'+prefs.map(p=>'<li>'+esc(p.body.slice(0,140))+'</li>').join('')+'</ul>':'')+'<p class="dsp-empty">Everything here stays on your laptop. Say “forget that” to remove the last thing I saved.</p>');
+      response=wantsEgyptianArabic(input)?'ده اللي أعرفه عنك يا فندم، على الشاشة.':'Here\'s what I know about you, sir. It all stays on your laptop.';}
     else if(intent?.action==='show')response=await showOnScreen(intent.text!);
     else if(intent?.action==='show-close'){closeDisplay();response='Cleared, sir.';}
     else if(intent){await performAction(intent.action,task);response='The Windows action was accepted. Disruptive actions require your confirmation.';}
@@ -872,7 +883,7 @@ async function voice(mode:string,task?:UserTask) {
   try{activeVoiceId=await command<string>('voice_start',{mode:mode==='wake'&&state.settings.sttEngine==='whisper'?'wake-whisper':mode,language:mode==='wake'?'en-US':state.settings.language});voiceMode=mode;aiState='Initializing microphone';render();}
   catch(error){voiceFailure=String(error);render();throw error;}
 }
-async function resumeWake() {if(!native||!desiredWake||voiceMode==='wake')return;voiceFailure='';
+async function resumeWake() {if(!native||!desiredWake||voiceMode==='wake'||privateMode)return;voiceFailure='';
   // The microphone can be briefly busy right after a capture; retry quietly before showing a warning.
   for(let attempt=0;;attempt++){try{activeVoiceId=await command<string>('voice_start',{mode:state.settings.sttEngine==='whisper'?'wake-whisper':'wake',language:'en-US'});voiceMode='wake';aiState='Initializing microphone';render();return;}
   catch(error){if(attempt<3&&desiredWake&&voiceMode!=='ptt'){await new Promise(r=>setTimeout(r,800*(attempt+1)));if(voiceMode==='wake')return;continue;}voiceFailure=String(error);render();throw error;}}}

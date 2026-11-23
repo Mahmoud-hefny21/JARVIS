@@ -227,6 +227,11 @@ export function localIntent(input: string): { action: string; text?: string } | 
   if(gpa)return {action:'gpa',text:gpa[1]};
   const exam=text.match(/^(?:my\s+)?(.{2,40}?)\s+(?:exam|final|midterm|quiz)\s+(?:is\s+)?(?:on\s+)?(.{3,40})$|^(?:emte7an|imti7an|امتحان)\s+(.{2,40}?)\s+(?:yom|يوم|on)\s+(.{3,40})$/iu);
   if(exam)return {action:'exam',text:JSON.stringify({subject:(exam[1]??exam[3]).trim(),when:(exam[2]??exam[4]).trim()})};
+  // Privacy and memory.
+  if(/^(?:go private|private mode(?: on)?|privacy mode|wad3 (?:5as|khas)|وضع خاص|خليك خاص)$/u.test(t))return {action:'private-on'};
+  if(/^(?:private (?:mode )?off|stop private mode|end private mode|exit private mode|(?:el8y|elghy) el wad3 el (?:5as|khas)|الغي الوضع الخاص|اقفل الوضع الخاص)$/u.test(t))return {action:'private-off'};
+  if(/^(?:forget (?:that|it|the last (?:thing|note|memory))|ensa (?:da|dah|deh|keda|dy)|انس[اى]? (?:ده|دي|كده))$/u.test(t))return {action:'forget-last'};
+  if(/^(?:what do you know about me|what do you remember about me|who am i|my profile|enta 3aref eh 3an+y|(?:انت|إنت) (?:تعرف|عارف) (?:عني|عنى) (?:ايه|إيه))$/u.test(t))return {action:'about-me'};
   // "Show me anything": English, Franco-Arabic and Arabic. Specific show-commands above win first.
   const show=text.match(/^(?:show(?: me)?|display|put up|pull up|bring up|(?:can you |could you )?show me|let me see|e3redli|e3rdli|e3rdly|3rdli|3rdly|warini|wareeni|wareny|warrini|وريني|ورّيني|اعرض(?:لي|ي لي)?|اعرضلي|عرضلي)\s+(?:(?:about|on|a|an|the)\s+)?([^\r\n]{2,200})$/iu);
   if(show&&!/[\u0000-\u001f\u007f]/.test(show[1]))return {action:'show',text:show[1].trim().replace(/[.!?؟]+$/u,'').replace(/\s+(?:on (?:the |my )?screen|please|for me|ala el screen|3al screen|على الشاشة)$/iu,'')};
