@@ -1,18 +1,19 @@
 // Owner-provided sounds (activation, wake-up music, notifications) stored locally in IndexedDB.
 // Nothing is downloaded or bundled; without a file the activation falls back to an original synthesized tone.
 import { command, native } from './bridge';
-export type Slot = 'wake' | 'activation' | 'music' | 'notify';
+export type Slot = 'wake' | 'activation' | 'music' | 'notify' | 'adhan';
 export type WakeMode = 'cinematic' | 'instant' | 'silent';
 export const SLOTS: { id: Slot; label: string; hint: string }[] = [
   { id: 'wake', label: 'Cinematic wake-up sound', hint: 'Plays on “Wake up, JARVIS”; the greeting follows the cue.' },
   { id: 'activation', label: 'Activation sound', hint: 'Plays the moment JARVIS wakes.' },
   { id: 'music', label: 'Wake-up music', hint: 'Fades in during the wake-up sequence, ducks while JARVIS speaks.' },
   { id: 'notify', label: 'Notification sound', hint: 'Plays before a spoken heads-up.' },
+  { id: 'adhan', label: 'Adhan (call to prayer)', hint: 'Plays at each prayer time for Al-Rehab. Choose a recording you like.' },
 ];
 type Prefs = { volume: Record<Slot, number>; silent: boolean; bargeIn?: boolean; mode?: WakeMode; greetAtMs?: number };
 const PREFS_KEY = 'jarvis-audio-prefs';
 export function prefs(): Prefs {
-  const base: Prefs = { volume: { wake: 0.9, activation: 0.8, music: 0.45, notify: 0.7 }, silent: false, mode: 'cinematic', greetAtMs: 1300 };
+  const base: Prefs = { volume: { wake: 0.9, activation: 0.8, music: 0.45, notify: 0.7, adhan: 0.85 }, silent: false, mode: 'cinematic', greetAtMs: 1300 };
   try { const p = JSON.parse(localStorage.getItem(PREFS_KEY) ?? 'null') as Prefs | null; if (p?.volume) return { ...base, ...p, volume: { ...base.volume, ...p.volume } }; } catch { /* storage unavailable */ }
   return base;
 }

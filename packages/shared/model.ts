@@ -30,7 +30,7 @@ export type OverviewLayout=z.infer<typeof OverviewLayoutSchema>;
 export const SettingsSchema = z.object({
   name: z.string().trim().min(1).max(60).default('Sir'), role: z.string().max(100).default('Personal workspace'),
   interests: z.string().max(240).default('Development, learning, and everything in between.'),
-  lowPower: z.boolean().default(false), reducedMotion: z.boolean().default(false), oneScreen: z.boolean().default(true), dnd: z.boolean().default(false),
+  lowPower: z.boolean().default(false), reducedMotion: z.boolean().default(false), oneScreen: z.boolean().default(true), prayerReminders: z.boolean().default(true), prayerLead: z.number().int().min(0).max(60).default(15), dnd: z.boolean().default(false),
   quietStart: z.number().int().min(0).max(23).default(22), quietEnd: z.number().int().min(0).max(23).default(7),
   sttEngine:z.enum(['sapi','whisper']).default('sapi'),
   wakeWordEnabled:z.boolean().default(true),
@@ -174,6 +174,18 @@ export function localIntent(input: string): { action: string; text?: string } | 
   const research=text.match(/^(?:research|look up|search the web for)\s+([^\r\n]{3,500})$/i);
   if(research&&!/[\u0000-\u001f\u007f]/.test(research[1]))return {action:'research',text:research[1].trim()};
   if(/^(?:close|hide|clear|dismiss) (?:the |that )?(?:display|screen|card|it|that|الشاشة|الشاشه|العرض|الكارت|ده|دي|el screen|el card)$|^(?:e2fel|2fel|eqfel) (?:el )?(?:screen|display|da|deh)$|^(?:اقفل|اخفي) (?:الشاشة|العرض|ده|دي)$/u.test(t))return {action:'show-close'};
+  if(/^(?:(?:the )?prayer times?(?: today)?|salah times|(?:when is )?(?:the )?next prayer|mawa3ee?d el sala[ah]?|mawa3id el salah|el sala(?:h)? el gaya emta|(?:مواعيد|اوقات|أوقات) الصلا[ةه]|الصلا[ةه] الجاي[ةه] امتى)$/u.test(t))return {action:'prayer'};
+  if(/^(?:(?:the )?qibla(?: direction)?|where is (?:the )?qibla|el qe?bla fe+n|el qibla fe+n|القبل[ةه] فين|اتجاه القبل[ةه])$/u.test(t))return {action:'qibla'};
+  if(/^(?:(?:what is )?(?:the |today's )?hijri date(?: today)?|el tarikh el hegry|التاريخ الهجري|النهارد[ةه] كام هجري)$/u.test(t))return {action:'hijri'};
+  if(/^(?:(?:the )?(?:dollar|usd|euro|riyal|exchange|currency) (?:rate|price)s?(?: today)?|exchange rates?|(?:el )?dollar b ?kam|el dollar bekam|(?:el )?3omla|(?:سعر )?الدولار(?: بكام)?(?: النهارد[ةه])?|سعر العمل[ةه])$/u.test(t))return {action:'rates',text:'fx'};
+  if(/^(?:(?:the )?gold (?:price|rate)s?(?: today)?|(?:el )?dahab b ?kam|el dahab bekam|(?:سعر )?(?:الدهب|الذهب)(?: بكام)?(?: النهارد[ةه])?)$/u.test(t))return {action:'rates',text:'gold'};
+  if(/^(?:(?:the )?egypt(?:'s)? (?:match|game|national team)(?: score)?|(?:when is )?egypt'?s? next (?:match|game)|match masr(?: emta)?|mat?ch el montakhab(?: emta)?|el montakhab(?: kam kam)?|ماتش (?:مصر|المنتخب)(?: امتى| كام كام)?|المنتخب(?: كام كام)?)$/u.test(t))return {action:'football'};
+  const zakat=t.match(/^(?:zakat|zaka|zakah|زكا[ةه])(?:\s+(?:on|of|3ala|ala|على))?\s*([\d.,٠-٩]+)?\s*(?:k|الف|alf|thousand)?\s*(?:egp|pounds?|geneh|gneh|جنيه)?$/u);
+  if(zakat)return {action:'zakat',text:(zakat[1]??'').replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/,/g,'')+(/\b(?:k|alf|thousand)\b|الف/u.test(t)?'k':'')};
+  const ayah=t.match(/^(?:quran|qur'?an|ayah|aya|ayet|آي[ةه]|قرآن|القرآن)\s+(\d{1,3})\s*[:\s]\s*(\d{1,3})$/u);
+  if(ayah)return {action:'quran',text:ayah[1]+':'+ayah[2]};
+  if(/^(?:ayat?(?: el| al)?[ -]?kursi|ayatul kursi|آي[ةه] الكرسي)$/u.test(t))return {action:'quran',text:'2:255'};
+  if(/^(?:(?:the |next |upcoming )?(?:holidays?|occasions?)|(?:el )?(?:agazat|agaza el gaya)|(?:when is )?(?:ramadan|eid|the eid|eid al[- ]?(?:fitr|adha)|arafah|ashura|sham el[- ]?nessim)|ramadan emta|el 3eed emta|3eed emta|(?:الاجازات|الأجازات|الإجازات)(?: الجاي[ةه])?|(?:رمضان|العيد|عيد الفطر|عيد الاضحى|عيد الأضحى|شم النسيم)(?: امتى)?)$/u.test(t))return {action:'occasions'};
   // "Show me anything": English, Franco-Arabic and Arabic. Specific show-commands above win first.
   const show=text.match(/^(?:show(?: me)?|display|put up|pull up|bring up|(?:can you |could you )?show me|let me see|e3redli|e3rdli|e3rdly|3rdli|3rdly|warini|wareeni|wareny|warrini|وريني|ورّيني|اعرض(?:لي|ي لي)?|اعرضلي|عرضلي)\s+(?:(?:about|on|a|an|the)\s+)?([^\r\n]{2,200})$/iu);
   if(show&&!/[\u0000-\u001f\u007f]/.test(show[1]))return {action:'show',text:show[1].trim().replace(/[.!?؟]+$/u,'').replace(/\s+(?:on (?:the |my )?screen|please|for me|ala el screen|3al screen|على الشاشة)$/iu,'')};
@@ -314,11 +326,14 @@ const COMMAND_WORDS: [RegExp, string][] = [
 ];
 // Franco = Egyptian Arabic in Latin letters: digits standing for letters (3=ع, 7=ح, 2=ء, 5=خ, 8=غ) inside words,
 // or at least two common Franco words. Plain English with numbers ("2 apples") is not Franco.
-const FRANCO_WORDS=new Set(['ana','enta','enti','ezayak','ezayek','ezay','eh','eih','leh','fen','feen','emta','keda','kda','msh','mesh','mish','bokra','bukra','enharda','naharda','delwa2ty','dlw2ty','3ayz','3ayez','3awz','3amel','3amla','a3mel','e3mel','e3ml','ya','yala','yalla','tamam','5alas','khalas','ma3lesh','fakkarny','fakarny','faker','eftah','2fel','e2fel','sha8al','shaghal','3andy','3ndy','3andak','kam','meen','min','ahsan','awy','oly','2oly','2ol','kalem','ezzay','lesa','lessa','bas','bs','wala','walla','gamed','7aga','haga','kollo','kol']);
+const FRANCO_WORDS=new Set(['ana','enta','enti','ezayak','ezayek','ezay','eh','eih','leh','fen','feen','emta','keda','kda','msh','mesh','mish','bokra','bukra','enharda','naharda','delwa2ty','dlw2ty','3ayz','3ayez','3awz','3amel','3amla','a3mel','e3mel','e3ml','ya','yala','yalla','tamam','5alas','khalas','ma3lesh','fakkarny','fakarny','faker','eftah','2fel','e2fel','sha8al','shaghal','3andy','3ndy','3andak','kam','meen','min','ahsan','awy','oly','2oly','2ol','kalem','ezzay','lesa','lessa','bas','bs','wala','walla','gamed','7aga','haga','kollo','kol','el','b','bekam','bkam','fen','emta','masr','montakhab','qebla','qibla','dahab','dollar','salah','sala','mawa3eed','mawa3id','e3rdli','warini','eftah','3ala','3an','ba3d','2abl','abl','sa3a','enaharda','bokra','gaya','gay','kam']);
+const STRONG_FRANCO=new Set(['emta','fen','feen','ezay','ezayak','ezayek','leh','bekam','bkam','3ayz','3ayez','3awz','msh','mesh','keda','kda','delwa2ty','enharda','naharda','bokra','e3rdli','warini','eftah','fakkarny','fakarny','ba3d','e3mel','a3mel','3amel','yalla','tamam','5alas','ma3lesh','2oly','oly']);
 export function wantsEgyptianArabic(input: string): boolean {
   if (/[\u0600-\u06FF]/.test(input)) return true;
   const words = input.toLowerCase().match(/[a-z0-9']+/g) ?? [];
   if (words.some(w => /[a-z][2378]|[2378][a-z]/.test(w) && !/^\d+(st|nd|rd|th|am|pm|k|m|gb|mb|s)$/.test(w))) return true;
+  // Some words are Franco on their own ("ramadan emta", "el gym fen").
+  if (words.some(w => STRONG_FRANCO.has(w))) return true;
   return words.filter(w => FRANCO_WORDS.has(w)).length >= 2;
 }
 // "open الآلة الحاسبة" → "open Calculator", so the installed-app lookup finds it.

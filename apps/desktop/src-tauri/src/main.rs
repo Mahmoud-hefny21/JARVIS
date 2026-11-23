@@ -6,6 +6,7 @@ mod automation;
 mod calendar;
 mod claude;
 mod db;
+mod egypt;
 mod groq;
 mod integrations;
 mod knowledge;
@@ -491,6 +492,12 @@ fn ai_cancel(state: tauri::State<NativeState>) -> Result<()> {
 async fn weather(app: tauri::AppHandle) -> Result<Value> {
     background(move || integrations::weather(&app)).await
 }
+/// Sends a notification to the owner's subscribed iPhone (no-op when none is subscribed).
+#[tauri::command]
+fn push_notify(app: tauri::AppHandle, title: String, body: String) -> Result<()> {
+    push::notify_phone(&app, &title.chars().take(120).collect::<String>(), &body.chars().take(400).collect::<String>());
+    Ok(())
+}
 #[tauri::command]
 async fn wiki_lookup(query: String, lang: String) -> Result<Value> {
     background(move || integrations::wiki_lookup(&query, &lang)).await
@@ -816,7 +823,7 @@ fn active_window() -> Result<Option<Value>> {
 #[tauri::command]
 fn sound_asset(app: tauri::AppHandle, slot: String) -> Result<Option<String>> {
     use base64::Engine;
-    if !["wake", "activation", "music", "notify"].contains(&slot.as_str()) {
+    if !["wake", "activation", "music", "notify", "adhan"].contains(&slot.as_str()) {
         return Err("Unknown sound slot".into());
     }
     let dir = app.path().app_data_dir().map_err(|_| "App data folder unavailable")?.join("sounds");
@@ -1096,6 +1103,10 @@ fn main() {
             sound_asset,
             active_window,
             wiki_lookup,
+            push_notify,
+            egypt::egypt_rates,
+            egypt::egypt_football,
+            egypt::quran_verse,
             mobile::mobile_reply,
             knowledge::knowledge_search,
             actions::action_prepare,

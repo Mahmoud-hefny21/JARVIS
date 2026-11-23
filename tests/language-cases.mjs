@@ -28,6 +28,17 @@ export const COMMANDS = [
   ['افتح واتساب', 'site', 'whatsapp.com'], ['eftah amazon', 'site', 'amazon.eg'], ['open jumia', 'site', 'jumia.com.eg'], ['افتح جوميا', 'site', 'jumia.com.eg'], ['eftah wuzzuf', 'site', 'wuzzuf.net'],
   // Spelling slips in Franco verbs
   ['eftaah youtube', 'site', 'youtube.com'], ['e3rdly el tasks', 'show'], ['wariny el tasks', 'show'],
+  // Prayer, Qibla, Hijri date
+  ['prayer times', 'prayer'], ['mawa3eed el salah', 'prayer'], ['مواعيد الصلاة', 'prayer'], ['when is the next prayer', 'prayer'], ['الصلاة الجاية امتى', 'prayer'], ['el sala el gaya emta', 'prayer'],
+  ['qibla', 'qibla'], ['el qebla fen', 'qibla'], ['القبلة فين', 'qibla'], ['where is the qibla', 'qibla'],
+  ['hijri date', 'hijri'], ['التاريخ الهجري', 'hijri'], ['el tarikh el hegry', 'hijri'],
+  // Rates, gold, zakat, Quran, Egypt national team
+  ['dollar rate', 'rates', 'fx'], ['el dollar b kam', 'rates', 'fx'], ['الدولار بكام', 'rates', 'fx'], ['سعر الدولار', 'rates', 'fx'], ['exchange rates', 'rates', 'fx'],
+  ['gold price', 'rates', 'gold'], ['el dahab b kam', 'rates', 'gold'], ['الدهب بكام', 'rates', 'gold'], ['سعر الذهب', 'rates', 'gold'],
+  ['zakat', 'zakat'], ['zakat 200000', 'zakat', '200000'], ['zakat on 150,000 pounds', 'zakat', '150000'], ['زكاة ٢٠٠٠٠٠', 'zakat', '200000'],
+  ['quran 94:5', 'quran', '94:5'], ['ayah 2 255', 'quran', '2:255'], ['ayat el kursi', 'quran', '2:255'], ['آية الكرسي', 'quran', '2:255'],
+  ['egypt match', 'football'], ['match masr emta', 'football'], ['ماتش مصر امتى', 'football'], ['el montakhab kam kam', 'football'], ['when is egypt next match', 'football'],
+  ['holidays', 'occasions'], ['ramadan emta', 'occasions'], ['رمضان امتى', 'occasions'], ['el 3eed emta', 'occasions'], ['العيد امتى', 'occasions'], ['when is eid al adha', 'occasions'], ['الاجازات', 'occasions'], ['شم النسيم امتى', 'occasions'],
   // Close the card
   ['close the display', 'show-close'], ['e2fel el screen', 'show-close'], ['hide it', 'show-close'], ['اقفل الشاشة', 'show-close'],
   // Tasks

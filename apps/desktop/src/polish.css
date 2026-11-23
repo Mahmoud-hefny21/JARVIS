@@ -353,3 +353,7 @@ body.workshop-page .display-card.enter{animation:dsp-side .5s cubic-bezier(.2,.8
 }
 /* Arabic replies read right-to-left, English left-to-right, each by its own first letters. */
 .hud-reply .hud-jarvis,.hud-reply .hud-you{unicode-bidi:plaintext;text-align:start}
+/* Prayer card: the next prayer stands out in gold. */
+.dsp-body tr.dsp-now th,.dsp-body tr.dsp-now td{color:#ffc76a;font-weight:600}
+/* Quran verse on a card: large Arabic script. */
+.dsp-body .dsp-ayah{font-size:28px;line-height:2;text-align:center;color:#eafcff;font-family:"Amiri","Traditional Arabic","Segoe UI",serif;margin:8px 0 12px}
