@@ -363,3 +363,15 @@ body.workshop-page .display-card.enter{animation:dsp-side .5s cubic-bezier(.2,.8
 .dsp-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
 .dsp-card{border:1px solid #1f6f88;border-radius:8px;padding:12px;background:#061e2b}
 .dsp-card summary{font-weight:600;list-style:none}.dsp-card[open]{border-color:#ffc76a}.dsp-card p{margin-top:8px;color:#d8f6ff}
+/* One screen fits any window height (2026-11-23): the core is sized from the height left after the header,
+   the listening bar and the command bar, so nothing below it is clipped. Its look and motion are unchanged. */
+body.one-screen{--core:clamp(220px,calc((100vh - 400px) / 1.15),62vw)}
+body.one-screen .ws-core{width:var(--core)}
+body.one-screen .workshop .ws-state{top:calc(50% + var(--core) * .56 + 4px)}
+body.one-screen.workshop-page.card-open .ws-core,body.one-screen.workshop-page.card-open .workshop .ws-state{translate:calc(-1 * min(22vw, var(--core) * .62)) 0}
+@media (min-width:901px){body.one-screen.workshop-page.reply-open:not(.card-open) .ws-core,body.one-screen.workshop-page.reply-open:not(.card-open) .workshop .ws-state{translate:calc(-1 * min(17vw, var(--core) * .5)) 0}}
+/* While the "Listening…" bar shows, the line under the core steps aside (they'd say the same thing). */
+body.one-screen.listening .workshop .ws-state{opacity:0;transition:opacity .3s ease}
+body.one-screen{--core:clamp(240px,calc((100vh - 320px) / 1.1),62vw)}
+/* The centre label scales with the core so it always fits inside the glowing heart. */
+body.one-screen .ws-heart span{font-size:calc(var(--core) * .034);letter-spacing:.3em;padding-left:.3em;white-space:nowrap}
