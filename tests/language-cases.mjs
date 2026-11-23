@@ -80,7 +80,7 @@ export const COMMANDS = [
   // Memory
   ['remember my locker code is 42', 'remember', 'locker code is 42'], ['recall locker', 'recall', 'locker'],
   // Mute and voice
-  ['open my courses folder', 'courses'], ['efta7 el mawad', 'courses'], ['افتح المحاضرات', 'courses'], ['mute', 'mute'], ['be quiet', 'hush'], ['shut up', 'hush'], ['eskot', 'hush'], ['اسكت', 'hush'], ['i need to focus', 'focus', '0'], ['ana m7tag arkez', 'focus', '0'], ['محتاج اركز', 'focus', '0'], ['silent mode', 'focus', '0'], ['unmute', 'unmute'], ['etkalem', 'unmute'], ['اتكلم', 'unmute'],
+  ['open my courses folder', 'courses'], ['efta7 el mawad', 'courses'], ['افتح المحاضرات', 'courses'], ['show me prayers time', 'prayer'], ['when is asr', 'prayer', 'asr'], ['When is us?', 'prayer', 'asr'], ['when is zuhr', 'prayer', 'dhuhr'], ['el maghreb emta', 'prayer', 'maghrib'], ['العشا امتى', 'prayer', 'isha'], ['الفجر الساعة كام', 'prayer', 'fajr'], ['mute', 'mute'], ['be quiet', 'hush'], ['shut up', 'hush'], ['eskot', 'hush'], ['اسكت', 'hush'], ['i need to focus', 'focus', '0'], ['ana m7tag arkez', 'focus', '0'], ['محتاج اركز', 'focus', '0'], ['silent mode', 'focus', '0'], ['unmute', 'unmute'], ['etkalem', 'unmute'], ['اتكلم', 'unmute'],
   // Wake
   ['jarvis', 'wake', 'instant'], ['wake up jarvis', 'wake'], ['good morning jarvis', 'wake'],
   // Briefing and status

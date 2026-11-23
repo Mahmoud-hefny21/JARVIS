@@ -9,7 +9,7 @@ use tauri::Emitter;
 
 const STT_MODEL: &str = "whisper-large-v3-turbo";
 /// Biases recognition toward the app's command words (names Whisper often mishears).
-const VOCABULARY: &str = "JARVIS, buy, open Chrome, YouTube, VS Code, monitor one, monitor two, add task, remind me, remember, daily briefing, weather.";
+const VOCABULARY: &str = "JARVIS, buy, open Chrome, YouTube, VS Code, monitor one, monitor two, add task, remind me, remember, daily briefing, weather, prayer times, Fajr, Dhuhr, Asr, Maghrib, Isha, salah, Al-Rehab, New Cairo, MIU, sir.";
 const CHAT_MODEL: &str = "openai/gpt-oss-120b";
 
 pub fn key(app: &tauri::AppHandle) -> Option<zeroize::Zeroizing<String>> {
