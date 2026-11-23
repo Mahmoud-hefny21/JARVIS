@@ -21,6 +21,7 @@ mod profiles;
 mod projects;
 mod runtime;
 mod understanding;
+mod voiceid;
 mod windows;
 use chrono::Utc;
 use db::{Database, Record, Result};
@@ -88,6 +89,11 @@ fn confirmed(app: &tauri::AppHandle, title: &str, body: &str) -> bool {
             0x0001 | 0x0030 | 0x0100 | 0x10000,
         ) == 1
     }
+}
+/// Records an ignored (not-the-owner) sentence's score in the activity log, for tuning Voice ID.
+fn voiceid_log(app: &tauri::AppHandle, similarity: f32, threshold: f32) -> Result<()> {
+    let _ = app.emit("voiceid-ignored", json!({"similarity": similarity, "threshold": threshold}));
+    Ok(())
 }
 fn grant_path(app: &tauri::AppHandle, id: &str) -> Result<PathBuf> {
     uuid::Uuid::parse_str(id).map_err(|_| "Invalid project ID")?;
@@ -1110,6 +1116,10 @@ fn main() {
             egypt::media_key,
             egypt::define_word,
             egypt::git_summary,
+            voiceid::voiceid_status,
+            voiceid::voiceid_enroll_clip,
+            voiceid::voiceid_enroll_finish,
+            voiceid::voiceid_enable,
             mobile::mobile_reply,
             knowledge::knowledge_search,
             actions::action_prepare,

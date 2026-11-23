@@ -640,6 +640,16 @@ async function answer(input:string,task?:UserTask,directVoiceRequest=false) {
       fillDisplay('Git · '+project.title,'<p class="dsp-sub">'+esc(g.status.split('\n')[0]??'')+'</p><h3>Changed files</h3>'+(changed.length?'<ul>'+changed.slice(0,20).map(l=>'<li><code>'+esc(l)+'</code></li>').join('')+'</ul>':'<p class="dsp-empty">Nothing uncommitted.</p>')+'<h3>Today</h3>'+(commits.length?'<ul>'+commits.map(l=>'<li>'+esc(l)+'</li>').join('')+'</ul>':'<p class="dsp-empty">No commits today.</p>')+'<p class="dsp-empty">Read-only: nothing was changed.</p>');
       response=commits.length+' commit'+(commits.length===1?'':'s')+' today and '+changed.length+' changed file'+(changed.length===1?'':'s')+' in '+project.title+', sir.';}
     else if(intent?.action==='easter-egg')response='Then I\'d suggest finding a suit, sir. Preferably one that fits.';
+    else if(intent?.action==='voice-enroll'){if(!native)throw new Error('Voice ID needs the Windows app.');
+      const lines=['JARVIS, what\'s on my schedule for tomorrow morning?','يا جارفيس فكرني أكلم أحمد بكرة الساعة خمسة','Open YouTube and play something calm while I study.','ezayak ya JARVIS, el gaw 3amel eh enharda?','Remind me to pray Asr and drink some water.'];
+      const wasListening=desiredWake;if(wasListening)await stopVoice(false);
+      try{for(let i=0;i<lines.length;i++){fillDisplay('Learning your voice · '+(i+1)+' of '+lines.length,'<p class="dsp-sub">Read this aloud in your normal voice:</p><p class="dsp-big" dir="auto" style="font-size:26px">'+esc(lines[i])+'</p><p class="dsp-empty">Only a voice fingerprint is kept on this laptop, never the recordings.</p>');
+          if(i===0)await speak('Read each sentence on the screen in your normal voice, sir.').catch(()=>{});
+          let ok=false;for(let attempt=0;attempt<2&&!ok;attempt++){try{await command('voiceid_enroll_clip',{first:i===0&&attempt===0});ok=true;}catch(error){if(attempt===1)throw error;await speak('I didn\'t catch that, sir. Once more, please.').catch(()=>{});}}}
+        const r=await command<{threshold:number;ownScores:number[]}>('voiceid_enroll_finish');closeDisplay();
+        response=wantsEgyptianArabic(input)?'تمام يا فندم، اتعلمت صوتك. من دلوقتي هسمعك إنت بس.':'Done, sir. I know your voice now, and I\'ll only listen to you.';void state.activity('Voice ID enrolled','threshold '+r.threshold.toFixed(2)+'; own scores '+r.ownScores.map(x=>x.toFixed(2)).join(', '));}
+      finally{if(wasListening){desiredWake=true;await resumeWake().catch(()=>{});}}}
+    else if(intent?.action==='voice-lock'){await command('voiceid_enable',{enabled:intent.text==='on'});response=intent.text==='on'?(wantsEgyptianArabic(input)?'حاضر يا فندم، هسمعك إنت بس.':'Understood, sir. I\'ll only listen to you.'):(wantsEgyptianArabic(input)?'تمام، هسمع الكل.':'All right, sir. I\'ll listen to everyone.');}
     else if(intent?.action==='show')response=await showOnScreen(intent.text!);
     else if(intent?.action==='show-close'){closeDisplay();response='Cleared, sir.';}
     else if(intent){await performAction(intent.action,task);response='The Windows action was accepted. Disruptive actions require your confirmation.';}

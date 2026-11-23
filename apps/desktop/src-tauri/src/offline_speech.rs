@@ -213,12 +213,9 @@ pub fn cancel(state: &NativeState) -> Result<()> {
     Ok(())
 }
 pub fn transcribe(app: &tauri::AppHandle, wav: &Path) -> Result<String> {
-    let language = crate::integrations::settings(app)
-        .ok()
-        .and_then(|c| c["language"].as_str().map(|l| if l.starts_with("ar") { "ar" } else { "en" }))
-        .unwrap_or("en");
     if crate::groq::key(app).is_some() {
-        if let Ok(text) = crate::groq::transcribe(app, wav, language) {
+        let audio = std::fs::read(wav).unwrap_or_default();
+        if let Ok(text) = crate::groq::transcribe_audio(app, &audio, "speech.wav", "audio/wav", None) {
             return clean_transcript(&text);
         }
     }
@@ -296,7 +293,7 @@ fn clean_transcript(text: &str) -> Result<String> {
 }
 /// True while JARVIS's own voice is playing (set by the speak command).
 pub static SPEAKING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-fn speaking() -> bool { SPEAKING.load(Ordering::SeqCst) }
+pub(crate) fn speaking() -> bool { SPEAKING.load(Ordering::SeqCst) }
 static LAST_HEARD: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 fn now_ms() -> u64 { std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0) }
 /// True for 20 s after the microphone captured a real (non-empty) request from the user.
@@ -321,7 +318,17 @@ pub fn microphone(app: &tauri::AppHandle, follow_up: bool) -> Result<String> {
             || state.offline_epoch.load(Ordering::SeqCst) != epoch,
             &wav,
         )?;
-        transcribe(app, &wav)
+        // Voice ID runs alongside transcription (no added wait); another voice is treated as nothing heard.
+        let (text, owner) = std::thread::scope(|scope| {
+            let check = scope.spawn(|| crate::voiceid::check(app, &wav));
+            let text = transcribe(app, &wav);
+            (text, check.join().ok().flatten())
+        });
+        if let Some((false, similarity, threshold)) = owner {
+            let _ = crate::voiceid_log(app, similarity, threshold);
+            return Err("No audible speech from the owner (another voice ignored)".into());
+        }
+        text
     })();
     let _ = std::fs::remove_file(&wav);
     if result.is_ok() {

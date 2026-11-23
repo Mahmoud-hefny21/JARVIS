@@ -250,6 +250,10 @@ export function localIntent(input: string): { action: string; text?: string } | 
   const git=t.match(/^(?:git status|what (?:did i change|changed) today|what changed in (?:my )?code(?: today)?|git log today|eh elly et8ayar enharda)(?:\s+(?:in|for|fe|في)\s+(.{2,40}))?$/u);
   if(git)return {action:'git',text:git[1]??''};
   if(/^(?:i am iron ?man|i'm iron ?man|ana iron ?man|أنا ايرون مان)$/u.test(t))return {action:'easter-egg'};
+  // Voice ID: learn the owner's voice, then answer only him.
+  if(/^(?:learn my voice|learn to recogni[sz]e my voice|teach you my voice|enroll my voice|set up voice id|e3raf sotey|e3raf soty|(?:ات|ا)?علم صوتي|اعرف صوتي|اتعرف على صوتي)$/u.test(t))return {action:'voice-enroll'};
+  if(/^(?:listen (?:only )?to me(?: only)?|only listen to me|voice (?:id|lock) on|esma3 leya bas|isma3ni ana bas|اسمعني (?:انا|أنا) بس|اسمع صوتي بس)$/u.test(t))return {action:'voice-lock',text:'on'};
+  if(/^(?:listen to everyone|voice (?:id|lock) off|esma3 kolo|اسمع الكل|اسمع كل الناس)$/u.test(t))return {action:'voice-lock',text:'off'};
   // "Show me anything": English, Franco-Arabic and Arabic. Specific show-commands above win first.
   const show=text.match(/^(?:show(?: me)?|display|put up|pull up|bring up|(?:can you |could you )?show me|let me see|e3redli|e3rdli|e3rdly|3rdli|3rdly|warini|wareeni|wareny|warrini|وريني|ورّيني|اعرض(?:لي|ي لي)?|اعرضلي|عرضلي)\s+(?:(?:about|on|a|an|the)\s+)?([^\r\n]{2,200})$/iu);
   if(show&&!/[\u0000-\u001f\u007f]/.test(show[1]))return {action:'show',text:show[1].trim().replace(/[.!?؟]+$/u,'').replace(/\s+(?:on (?:the |my )?screen|please|for me|ala el screen|3al screen|على الشاشة)$/iu,'')};
