@@ -65,6 +65,9 @@ export const COMMANDS = [
   ['git status', 'git'], ['what changed today in jarvis', 'git', 'jarvis'], ['i am iron man', 'easter-egg'],
   // Voice ID
   ['learn my voice', 'voice-enroll'], ['e3raf sotey', 'voice-enroll'], ['اتعلم صوتي', 'voice-enroll'], ['listen only to me', 'voice-lock', 'on'], ['اسمعني انا بس', 'voice-lock', 'on'], ['listen to everyone', 'voice-lock', 'off'],
+  // Directions
+  ['give me location to MIU', 'directions', 'MIU'], ['directions to cairo festival city', 'directions', 'cairo festival city'], ['how do I get to the airport', 'directions', 'airport'],
+  ['wadini el gam3a', 'directions', 'gam3a'], ['el taree2 le el rehab', 'directions', 'rehab'], ['اوصل ازاي للجامعة', 'directions', 'للجامعة'], ['وديني المطار', 'directions', 'المطار'], ['take me home', 'directions', 'home'],
   // Close the card
   ['Remove your day from the screen.', 'show-close'], ['clear the screen', 'show-close'], ['shil da', 'show-close'], ['شيل ده', 'show-close'], ['e2felo', 'show-close'], ['take that off the screen', 'show-close'],
   ['close the display', 'show-close'], ['e2fel el screen', 'show-close'], ['hide it', 'show-close'], ['اقفل الشاشة', 'show-close'],

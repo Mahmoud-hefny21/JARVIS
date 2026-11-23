@@ -254,6 +254,10 @@ export function localIntent(input: string): { action: string; text?: string } | 
   if(/^(?:learn my voice|learn to recogni[sz]e my voice|teach you my voice|enroll my voice|set up voice id|e3raf sotey|e3raf soty|(?:ات|ا)?علم صوتي|اعرف صوتي|اتعرف على صوتي)$/u.test(t))return {action:'voice-enroll'};
   if(/^(?:listen (?:only )?to me(?: only)?|only listen to me|voice (?:id|lock) on|esma3 leya bas|isma3ni ana bas|اسمعني (?:انا|أنا) بس|اسمع صوتي بس)$/u.test(t))return {action:'voice-lock',text:'on'};
   if(/^(?:listen to everyone|voice (?:id|lock) off|esma3 kolo|اسمع الكل|اسمع كل الناس)$/u.test(t))return {action:'voice-lock',text:'off'};
+  // Directions: "give me location to MIU", "how do I get to Cairo Festival City", "wadini el gam3a", "اوصل ازاي للجامعة".
+  const route=text.match(/^(?:(?:can you |please )?(?:give|show|send) me (?:the )?(?:location|directions|route|way|map) (?:to|of|for)|(?:get |show )?directions to|(?:the )?(?:route|way) to|navigate to|take me to|how (?:do i|can i|to) (?:get|go) to|(?:give me |show me )?(?:the )?location of|where is the location of|wadini|waddini|wa2eny|wasalni|el taree2 (?:le|l|li)|(?:a|e)wsal ezay (?:le|l)?|ازاي (?:اروح|أروح|اوصل|أوصل)|(?:اوصل|أوصل) ازاي|وديني|ودّيني|خدني|الطريق (?:لـ?|ل|الى|إلى))\s*(.{2,60}?)[?.!؟]*$/iu);
+  if(route)return {action:'directions',text:route[1].replace(/^(?:the|el|al)\s+/i,'').trim()};
+  if(/^(?:take me home|(?:i want to )?go home|wadini el beit|روحني|عايز اروح البيت)$/iu.test(t))return {action:'directions',text:'home'};
   // "Show me anything": English, Franco-Arabic and Arabic. Specific show-commands above win first.
   const show=text.match(/^(?:show(?: me)?|display|put up|pull up|bring up|(?:can you |could you )?show me|let me see|e3redli|e3rdli|e3rdly|3rdli|3rdly|warini|wareeni|wareny|warrini|وريني|ورّيني|اعرض(?:لي|ي لي)?|اعرضلي|عرضلي)\s+(?:(?:about|on|a|an|the)\s+)?([^\r\n]{2,200})$/iu);
   if(show&&!/[\u0000-\u001f\u007f]/.test(show[1]))return {action:'show',text:show[1].trim().replace(/[.!?؟]+$/u,'').replace(/\s+(?:on (?:the |my )?screen|please|for me|ala el screen|3al screen|على الشاشة)$/iu,'')};

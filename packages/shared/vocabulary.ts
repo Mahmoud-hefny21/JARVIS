@@ -75,7 +75,7 @@ export function timeToEnglish(input: string): string {
 }
 
 // Franco command verbs, for typo-tolerant matching of the first word.
-const VERB_LEXICON = ['eftah', 'eftahly', 'e3rdli', 'e3redli', 'warini', 'wareeni', 'fakkarny', 'fakarny', '2fel', 'e2fel', 'emsa7', 'dawar', 'sha8al', 'shaghal'];
+const VERB_LEXICON = ['wadini', 'waddini', 'wasalni', 'eftah', 'eftahly', 'e3rdli', 'e3redli', 'warini', 'wareeni', 'fakkarny', 'fakarny', '2fel', 'e2fel', 'emsa7', 'dawar', 'sha8al', 'shaghal'];
 function distance(a: string, b: string): number {
   const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
   for (let j = 1; j <= b.length; j++) d[0][j] = j;

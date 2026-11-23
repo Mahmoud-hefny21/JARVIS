@@ -324,8 +324,7 @@ pub fn microphone(app: &tauri::AppHandle, follow_up: bool) -> Result<String> {
             let text = transcribe(app, &wav);
             (text, check.join().ok().flatten())
         });
-        if let Some((false, similarity, threshold)) = owner {
-            let _ = crate::voiceid_log(app, similarity, threshold);
+        if let Some((false, _, _)) = owner {
             return Err("No audible speech from the owner (another voice ignored)".into());
         }
         text

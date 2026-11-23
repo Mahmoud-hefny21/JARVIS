@@ -90,9 +90,10 @@ fn confirmed(app: &tauri::AppHandle, title: &str, body: &str) -> bool {
         ) == 1
     }
 }
-/// Records an ignored (not-the-owner) sentence's score in the activity log, for tuning Voice ID.
+/// Reports each Voice ID decision's score to the window, which logs it as activity for tuning.
 fn voiceid_log(app: &tauri::AppHandle, similarity: f32, threshold: f32) -> Result<()> {
-    let _ = app.emit("voiceid-ignored", json!({"similarity": similarity, "threshold": threshold}));
+    // Scores only (never audio), so the threshold can be tuned from real use.
+    let _ = app.emit("voiceid-score", json!({"similarity": similarity, "threshold": threshold, "accepted": similarity >= threshold}));
     Ok(())
 }
 fn grant_path(app: &tauri::AppHandle, id: &str) -> Result<PathBuf> {

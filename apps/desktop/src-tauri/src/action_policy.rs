@@ -15,6 +15,13 @@ pub fn routine(action: &str, args: &Value, before: &str) -> Option<String> {
         }
         "open_website" => {
             let url = url::Url::parse(args["url"].as_str()?).ok()?;
+            // Google Maps directions: only fills in a route for him to look at.
+            if url.scheme() == "https" && url.host_str() == Some("www.google.com") && url.path() == "/maps/dir/"
+                && url.username().is_empty() && url.password().is_none() && url.fragment().is_none()
+                && url.query_pairs().all(|(k, _)| ["api", "origin", "destination", "travelmode"].contains(&k.as_ref()))
+            {
+                return Some("maps-route".into());
+            }
             // A WhatsApp message prepared for the owner: it only fills the chat box; WhatsApp still waits for Send.
             if url.scheme() == "https" && url.host_str() == Some("web.whatsapp.com") && url.path() == "/send"
                 && url.username().is_empty() && url.password().is_none() && url.fragment().is_none()

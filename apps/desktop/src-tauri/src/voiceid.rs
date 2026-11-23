@@ -114,6 +114,7 @@ pub fn check(app: &tauri::AppHandle, wav: &Path) -> Option<(bool, f32, f32)> {
     // Too short to judge (e.g. "yes"): let it through rather than ignore the owner.
     let mine = fingerprint(app, wav).ok()?;
     let similarity = cosine(&owner, &mine);
+    let _ = crate::voiceid_log(app, similarity, threshold);
     Some((similarity >= threshold, similarity, threshold))
 }
 
@@ -165,7 +166,8 @@ pub async fn voiceid_enroll_finish(app: tauri::AppHandle) -> Result<Value> {
     let own: Vec<f32> = all.iter().map(|c| cosine(&mean, c)).collect();
     let weakest = own.iter().cloned().fold(1.0f32, f32::min);
     // Accept anything close to the owner's weakest enrollment clip; other voices scored ≤ 0.46 in tests.
-    let threshold = (weakest - 0.15).clamp(0.40, 0.62);
+    // Live speech scores lower than the enrollment clips (distance, noise): keep the bar well below them.
+    let threshold = (weakest - 0.35).clamp(0.45, 0.52);
     let state = app.state::<crate::NativeState>();
     state.db.lock().map_err(|_| "Database unavailable")?.set_value(
         "voiceprint",

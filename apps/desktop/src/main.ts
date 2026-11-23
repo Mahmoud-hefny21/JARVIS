@@ -650,6 +650,15 @@ async function answer(input:string,task?:UserTask,directVoiceRequest=false) {
         response=wantsEgyptianArabic(input)?'تمام يا فندم، اتعلمت صوتك. من دلوقتي هسمعك إنت بس.':'Done, sir. I know your voice now, and I\'ll only listen to you.';void state.activity('Voice ID enrolled','threshold '+r.threshold.toFixed(2)+'; own scores '+r.ownScores.map(x=>x.toFixed(2)).join(', '));}
       finally{if(wasListening){desiredWake=true;await resumeWake().catch(()=>{});}}}
     else if(intent?.action==='voice-lock'){await command('voiceid_enable',{enabled:intent.text==='on'});await refreshVoiceId();response=intent.text==='on'?(wantsEgyptianArabic(input)?'حاضر يا فندم، هسمعك إنت بس.':'Understood, sir. I\'ll only listen to you.'):(wantsEgyptianArabic(input)?'تمام، هسمع الكل.':'All right, sir. I\'ll listen to everyone.');}
+    else if(intent?.action==='directions'){const raw=intent.text!.replace(/^لل(?=\S)/u,'ال').replace(/^ل(?=\S)/u,'');
+      // Places he goes to often, by the names he uses.
+      const PLACES:[RegExp,string,string][]=[[/^(?:miu|m\.i\.u|el gam3a|gam3a|the university|university|my university|(?:ال)?جامع[ةه]|جامعتي|جامعة مصر الدولية|misr international university)$/iu,'Misr International University, Cairo-Ismailia Desert Road, Cairo','MIU'],[/^(?:home|el beit|el bet|البيت|بيتي|al[- ]?rehab|el rehab|الرحاب)$/iu,'Al-Rehab City, New Cairo','home'],[/^(?:cairo festival city|festival city|كايرو فستيفال)$/iu,'Cairo Festival City Mall, New Cairo','Cairo Festival City'],[/^(?:the airport|airport|el matar|المطار)$/iu,'Cairo International Airport','the airport'],[/^(?:tahrir|el ta7rir|التحرير)$/iu,'Tahrir Square, Cairo','Tahrir']];
+      const known=PLACES.find(([re])=>re.test(raw.trim()));const destination=known?.[1]??raw+(/cairo|egypt|مصر|القاهرة/i.test(raw)?'':', Cairo');const label=known?.[2]??raw;
+      const origin=state.settings.latitude+','+state.settings.longitude;
+      const url='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(origin)+'&destination='+encodeURIComponent(destination)+'&travelmode=driving';
+      await command('open_website',{url},task);
+      fillDisplay('Route to '+label,'<p class="dsp-sub">From '+esc(state.settings.location)+'</p><p>Google Maps is open with the driving route and live traffic.</p><p class="dsp-empty">'+esc(destination)+'</p>');
+      response=wantsEgyptianArabic(input)?'فتحتلك الطريق لـ'+label+' على جوجل مابس يا فندم، من الرحاب.':'Here\'s the route to '+label+' from '+state.settings.location+', sir. Google Maps is open with live traffic.';}
     else if(intent?.action==='show')response=await showOnScreen(intent.text!);
     else if(intent?.action==='show-close'){closeDisplay();response='Cleared, sir.';}
     else if(intent){await performAction(intent.action,task);response='The Windows action was accepted. Disruptive actions require your confirmation.';}
@@ -1133,6 +1142,7 @@ async function init() {
     await listen<'pause'|'settings'>('tray-action',event=>{if(event.payload==='pause')void run(()=>stopVoice(false));else go('settings');});
     await listen<{level?:number;phase?:string}>('mic',event=>{const v=event.payload;if(typeof v.level==='number')micLevels.push(v.level),micLevels.length>96&&micLevels.shift();if(v.phase==='barge'&&sound.prefs().bargeIn){voiceLog('interrupted by the user');void command('speech_stop').catch(()=>undefined);}if(typeof v.level==='number')document.documentElement.style.setProperty('--audio-level',String(v.level));if(v.phase){aiState=v.phase==='listening'?'Listening':v.phase==='speech'?'Hearing you':'Understanding';updateIndicators();}});
     await listen('records-changed',()=>void run(()=>state.load()));
+    await listen<{similarity:number;threshold:number;accepted:boolean}>('voiceid-score',e=>void state.activity('Voice ID '+(e.payload.accepted?'accepted':'ignored'),e.payload.similarity.toFixed(2)+' (bar '+e.payload.threshold.toFixed(2)+')'));
     await listen<{id:string;text:string;voice?:boolean}>('mobile-ask',e=>askedFromPhone(e.payload.id,e.payload.text,e.payload.voice===true));
     await listen<{engine?:string;fallback?:boolean;reason?:string;fallbackReason?:string;error?:string}>('speech-output',event=>{if(event.payload.fallback)toast('Using the fast Windows voice.');else if(event.payload.error)toast('Speech failed: '+event.payload.error);});
     await listen<{type:string;session?:string;text?:string;reason?:string;level?:number;error?:string;confidence?:number;fallback?:boolean;language?:string;requestedLanguage?:string}>('voice',event=>{const value=event.payload;if(value.session!==activeVoiceId)return;if(value.type==='wake'){wakeRestarts=0;const said=(value.text??'').toLowerCase();
