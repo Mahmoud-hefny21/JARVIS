@@ -15,6 +15,13 @@ pub fn routine(action: &str, args: &Value, before: &str) -> Option<String> {
         }
         "open_website" => {
             let url = url::Url::parse(args["url"].as_str()?).ok()?;
+            // A WhatsApp message prepared for the owner: it only fills the chat box; WhatsApp still waits for Send.
+            if url.scheme() == "https" && url.host_str() == Some("web.whatsapp.com") && url.path() == "/send"
+                && url.username().is_empty() && url.password().is_none() && url.fragment().is_none()
+                && url.query_pairs().all(|(k, _)| k == "phone" || k == "text")
+            {
+                return Some("whatsapp-send".into());
+            }
             // Navigation without credentials, payload/query or custom protocols.
             if !["http", "https"].contains(&url.scheme())
                 || url.host_str().is_none()

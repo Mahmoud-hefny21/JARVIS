@@ -2,7 +2,7 @@
 // 1. smoke-launch the fresh build in an isolated QA profile; 2. install silently over the old version (data kept);
 // 3. launch the installed app and check it stays up; 4. on any failure, reinstall the last good installer.
 import { spawn, spawnSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 
@@ -35,6 +35,10 @@ function install(file) {
 }
 
 if (!existsSync(built) || !existsSync(setup)) { console.error('Build first: npm run build:windows'); process.exit(1); }
+// A failed build leaves the previous installer behind: refuse to "install" that again as if it were new.
+if (existsSync(lastGood) && statSync(setup).mtimeMs <= statSync(lastGood).mtimeMs && !process.argv.includes('--reinstall')) {
+  console.error('No new build since the last install (did the build fail?). Nothing was changed. Use --reinstall to force.'); process.exit(1);
+}
 
 // 1. Smoke test in an isolated profile (never touches personal data).
 const qa = path.join(root, 'qa', randomUUID());

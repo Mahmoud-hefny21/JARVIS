@@ -144,3 +144,28 @@ pub async fn define_word(word: String) -> Result<Value> {
     .await
     .map_err(|_| "Dictionary unavailable".to_string())?
 }
+
+/// Read-only git summary of an authorized project: branch, changed files, and today's commits.
+#[tauri::command]
+pub async fn git_summary(app: tauri::AppHandle, id: String) -> Result<Value> {
+    tauri::async_runtime::spawn_blocking(move || {
+        use std::os::windows::process::CommandExt;
+        let path = crate::grant_path(&app, &id)?;
+        let git = |args: &[&str]| -> Result<String> {
+            let out = std::process::Command::new("git")
+                .arg("-C").arg(&path).args(args)
+                .creation_flags(0x0800_0000)
+                .output()
+                .map_err(|_| "Git isn't available on this PC")?;
+            if !out.status.success() {
+                return Err("That folder isn't a git repository, sir.".into());
+            }
+            Ok(String::from_utf8_lossy(&out.stdout).chars().take(6000).collect())
+        };
+        let status = git(&["status", "--short", "--branch"])?;
+        let today = git(&["log", "--since=midnight", "--pretty=format:%h %s", "-n", "30"])?;
+        Ok(json!({"status": status, "today": today}))
+    })
+    .await
+    .map_err(|_| "Git unavailable".to_string())?
+}

@@ -18,6 +18,9 @@ export function directScopes(input:string,context:{currentId?:string|null;previo
   if(/\b(don't|do not|never|cancel|stop)\b|متفتحش|ما تفتحش|مش عايز/.test(text))return [];
   if(intent?.action==='task'||intent?.action==='remember')return [{action:'record_put',resource:'new:'+(intent.action==='task'?'task':'memory')}];
   // The shopping list is one note: created the first time, then only its lines change (see action_policy.rs).
+  // Contacts and birthdays are saved as notes; a WhatsApp message is only prepared (WhatsApp waits for Send).
+  if(intent?.action==='contact-save'||intent?.action==='birthday')return [{action:'record_put',resource:'new:memory'}];
+  if(intent?.action==='whatsapp')return [{action:'open_website',resource:'whatsapp-send'}];
   // An exam: one new calendar event plus up to three study reminders.
   if(intent?.action==='exam')return [{action:'record_put',resource:'new:event'},{action:'record_put',resource:'new:task'}];
   if(intent?.action==='shopping-add'||intent?.action==='shopping-clear')return [{action:'record_put',resource:'new:memory'},{action:'record_put',resource:'shopping-list'}];

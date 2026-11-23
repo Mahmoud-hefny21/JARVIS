@@ -375,3 +375,16 @@ body.one-screen.listening .workshop .ws-state{opacity:0;transition:opacity .3s e
 body.one-screen{--core:clamp(240px,calc((100vh - 320px) / 1.1),62vw)}
 /* The centre label scales with the core so it always fits inside the glowing heart. */
 body.one-screen .ws-heart span{font-size:calc(var(--core) * .034);letter-spacing:.3em;padding-left:.3em;white-space:nowrap}
+
+/* The core stays fixed in the centre (Mahmoud, 2026-11-23); replies appear on its left, cards on its right. */
+body.one-screen.workshop-page .ws-core,body.one-screen.workshop-page .workshop .ws-state{translate:0 0!important}
+body.one-screen{--side:min(500px,calc((100vw - var(--core) * 1.15) / 2 - 36px))}
+@media (min-width:901px){
+  body.one-screen.workshop-page .display-card{right:max(16px,1.5vw);left:auto;width:var(--side);top:47%;transform:translateY(-50%)}
+  body.one-screen.workshop-page .hud-reply{left:max(16px,1.5vw);right:auto;width:var(--side);top:47%;bottom:auto;transform:translateY(-50%)}
+  body.one-screen.workshop-page.card-open .hud-reply{display:block}
+  body.one-screen.workshop-page .hud-reply[hidden]{display:none}
+}
+/* The centre label always fits inside the glowing heart. */
+body.one-screen .ws-heart span{font-size:calc(var(--core) * .026);letter-spacing:.24em;padding-left:.24em}
+.dsp-body tr.dsp-late th,.dsp-body tr.dsp-late td{color:#ff8f84}

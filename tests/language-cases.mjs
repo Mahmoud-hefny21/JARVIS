@@ -56,7 +56,15 @@ export const COMMANDS = [
   // Privacy and memory
   ['go private', 'private-on'], ['وضع خاص', 'private-on'], ['private off', 'private-off'], ['forget that', 'forget-last'], ['ensa da', 'forget-last'], ['انسى ده', 'forget-last'],
   ['what do you know about me', 'about-me'], ['انت تعرف عني ايه', 'about-me'], ['enta 3aref eh 3anny', 'about-me'],
+  // People, translation, git
+  ['save ahmed number 01001234567', 'contact-save', '01001234567'], ['sagel raqam ahmed 01001234567', 'contact-save', 'ahmed'], ['سجل رقم احمد ٠١٠٠١٢٣٤٥٦٧', 'contact-save', '01001234567'],
+  ['what is ahmed number', 'contact-find', 'ahmed'], ['raqam ahmed eh', 'contact-find', 'ahmed'], ['رقم احمد ايه', 'contact-find', 'احمد'],
+  ['send ahmed I am on my way', 'whatsapp', 'on my way'], ['ab3at le ahmed en ana gay', 'whatsapp', 'ana gay'], ['ابعت لاحمد اني جاي', 'whatsapp', 'أنا جاي'], ['text mom: running late', 'whatsapp', 'running late'],
+  ["ahmed's birthday is march 5", 'birthday', 'march 5'], ['3eed milad ahmed 5 march', 'birthday', 'ahmed'], ['عيد ميلاد احمد ٥ مارس', 'birthday', 'احمد'],
+  ['translate how are you to arabic', 'translate', 'how are you'], ['targem el gomla di l english', 'translate', 'english'], ['ترجم صباح الخير', 'translate', 'صباح الخير'],
+  ['git status', 'git'], ['what changed today in jarvis', 'git', 'jarvis'], ['i am iron man', 'easter-egg'],
   // Close the card
+  ['Remove your day from the screen.', 'show-close'], ['clear the screen', 'show-close'], ['shil da', 'show-close'], ['شيل ده', 'show-close'], ['e2felo', 'show-close'], ['take that off the screen', 'show-close'],
   ['close the display', 'show-close'], ['e2fel el screen', 'show-close'], ['hide it', 'show-close'], ['اقفل الشاشة', 'show-close'],
   // Tasks
   ['add task buy bread', 'task', 'buy bread'], ['7ot task ashtry 3esh', 'task', 'ashtry 3esh'], ['zawed task call ahmed', 'task', 'call ahmed'], ['ضيف مهمة اذاكر', 'task', 'اذاكر'],
@@ -83,7 +91,7 @@ export const CHAT = [
   'ezayak ya jarvis', 'إزيك يا جارفيس', 'what is the capital of japan', 'a3mel eh 3ashan azaker ahsan?', 'ana 3andy eh bokra?', 'how do i open a file in python',
   'why is the sky blue', 'tell me a joke', 'el gaw 3amel eh enharda?', 'explain recursion', 'ازاي اذاكر احسن', 'what should i focus on today',
   'ana 3ayz azaker ahsan', 'i want to sleep early today', 'عايز اعرف الساعة كام', 'i need to focus', 'i want to be better at math', '3ayz a3raf el gaw 3amel eh',
-  'how are you', 'can you help me with my essay', 'ma3lesh ana ta3ban', 'thank you jarvis', 'shokran', 'شكرا يا جارفيس',
+  'send an email to ahmed', 'close chrome', 'remove the background from this photo please', 'how are you', 'can you help me with my essay', 'ma3lesh ana ta3ban', 'thank you jarvis', 'shokran', 'شكرا يا جارفيس',
 ];
 
 // Reminders: [sentence, title substring, [days from now, hour, minute] or ['+min', minutes]].

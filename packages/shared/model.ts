@@ -30,7 +30,7 @@ export type OverviewLayout=z.infer<typeof OverviewLayoutSchema>;
 export const SettingsSchema = z.object({
   name: z.string().trim().min(1).max(60).default('Sir'), role: z.string().max(100).default('Personal workspace'),
   interests: z.string().max(240).default('Development, learning, and everything in between.'),
-  lowPower: z.boolean().default(false), reducedMotion: z.boolean().default(false), oneScreen: z.boolean().default(true), prayerReminders: z.boolean().default(true), prayerLead: z.number().int().min(0).max(60).default(15), dnd: z.boolean().default(false),
+  lowPower: z.boolean().default(false), reducedMotion: z.boolean().default(false), oneScreen: z.boolean().default(true), prayerReminders: z.boolean().default(true), prayerLead: z.number().int().min(0).max(60).default(15), conversationMinutes: z.number().int().min(1).max(30).default(5), dnd: z.boolean().default(false),
   quietStart: z.number().int().min(0).max(23).default(22), quietEnd: z.number().int().min(0).max(23).default(7),
   sttEngine:z.enum(['sapi','whisper']).default('sapi'),
   wakeWordEnabled:z.boolean().default(true),
@@ -173,6 +173,8 @@ export function localIntent(input: string): { action: string; text?: string } | 
   if(projectSearch&&!/[\r\n;&|`$<>]/.test(projectSearch[1]))return {action:'project-search',text:projectSearch[1].trim()};
   const research=text.match(/^(?:research|look up|search the web for)\s+([^\r\n]{3,500})$/i);
   if(research&&!/[\u0000-\u001f\u007f]/.test(research[1]))return {action:'research',text:research[1].trim()};
+  // "Remove your day from the screen", "clear the screen", "شيل ده", "shil el card", "e2felo".
+  if(/^(?:remove|close|hide|clear|dismiss|take(?: off| away| down)?|get rid of)\s+(?:.{0,40}\s)?(?:from|off) (?:the |my |your )?(?:screen|display)$|^(?:remove|hide|dismiss|clear) (?:it|that|this|the card|this card|your day|everything|all)$|^clear (?:the |my )?screen$|^(?:shil|sheel|ashil|sheil|اشيل|شيل|امسح|اقفل|اقفله|اقفلها)\s*(?:da|dah|deh|di|el card|el screen|kol 7aga|ده|دي|الكارت|الشاشة|كل حاجة)?$|^(?:e2felo|e2felha|2felo|e2fel|e2fel da|close|اقفله|اقفلها)$|^delete (?:ده|دي|da|dah|deh)$/u.test(t))return {action:'show-close'};
   if(/^(?:close|hide|clear|dismiss) (?:the |that )?(?:display|screen|card|it|that|الشاشة|الشاشه|العرض|الكارت|ده|دي|el screen|el card)$|^(?:e2fel|2fel|eqfel) (?:el )?(?:screen|display|da|deh)$|^(?:اقفل|اخفي) (?:الشاشة|العرض|ده|دي)$/u.test(t))return {action:'show-close'};
   if(/^(?:(?:the )?prayer times?(?: today)?|salah times|(?:when is )?(?:the )?next prayer|mawa3ee?d el sala[ah]?|mawa3id el salah|el sala(?:h)? el gaya emta|(?:مواعيد|اوقات|أوقات) الصلا[ةه]|الصلا[ةه] الجاي[ةه] امتى)$/u.test(t))return {action:'prayer'};
   if(/^(?:(?:the )?qibla(?: direction)?|where is (?:the )?qibla|el qe?bla fe+n|el qibla fe+n|القبل[ةه] فين|اتجاه القبل[ةه])$/u.test(t))return {action:'qibla'};
@@ -209,7 +211,7 @@ export function localIntent(input: string): { action: string; text?: string } | 
   if(/^(?:mute (?:the )?(?:pc|computer|laptop|sound|volume|speakers)|ekt[e]?m el sot|اكتم الصوت|اقفل الصوت)$/u.test(t))return {action:'volume',text:'mute'};
   // Quick notes.
   const note=text.match(/^(?:note|take a note|note that|write down|sagel|sagal|seggel|ekteb|ektb|سجل|سجّل|اكتب|دون)(?:\s+(?:en|that|ان|إن|ملاحظ[ةه]|note))?\s+(.{2,500})$/iu);
-  if(note)return {action:'remember',text:note[1].trim()};
+  if(note&&!/(?:raqam|ra2am|rakam|رقم|number)\s+\S+.*[\d٠-٩]{8,}/iu.test(text))return {action:'remember',text:note[1].trim()};
   // Routines.
   if(/^(?:good ?night(?:,? jarvis)?|night jarvis|tesba7 (?:3ala|3la|ala) (?:5eer|khir|khair|5er)|ana hanam|تصبح على خير|انا هنام|أنا هنام)$/u.test(t))return {action:'goodnight'};
   const focus=t.replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).match(/^(?:study time|start studying|focus(?: mode)?|focus for|wa2t el mozakra|ha?zaker|هذاكر|وقت المذاكر[ةه]|ركز)(?:\s+(?:for\s+)?(\d{1,3})\s*(?:minutes?|mins?|d2aye2|da2aye2|دقيق[ةه]|دقايق))?$/u);
@@ -232,6 +234,22 @@ export function localIntent(input: string): { action: string; text?: string } | 
   if(/^(?:private (?:mode )?off|stop private mode|end private mode|exit private mode|(?:el8y|elghy) el wad3 el (?:5as|khas)|الغي الوضع الخاص|اقفل الوضع الخاص)$/u.test(t))return {action:'private-off'};
   if(/^(?:forget (?:that|it|the last (?:thing|note|memory))|ensa (?:da|dah|deh|keda|dy)|انس[اى]? (?:ده|دي|كده))$/u.test(t))return {action:'forget-last'};
   if(/^(?:what do you know about me|what do you remember about me|who am i|my profile|enta 3aref eh 3an+y|(?:انت|إنت) (?:تعرف|عارف) (?:عني|عنى) (?:ايه|إيه))$/u.test(t))return {action:'about-me'};
+  // People: contacts, WhatsApp messages (prepared, never sent automatically), birthdays.
+  const digits=(s:string)=>s.replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+  const contact=digits(text).match(/^(?:save|add|sagel|sagal|seggel|سجل|سجّل|احفظ)\s+(?:the\s+)?(?:(?:phone\s+)?number\s+(?:of|for)\s+|raqam\s+|ra2am\s+|rakam\s+|رقم\s+)?(.{2,30}?)(?:'s)?(?:\s+(?:number|raqam|رقم))?\s*(?:is|:|=)?\s*(\+?\d[\d\s-]{7,16}\d)$/iu);
+  if(contact)return {action:'contact-save',text:JSON.stringify({name:contact[1].trim(),phone:contact[2].replace(/[\s-]/g,'')})};
+  const number=t.match(/^(?:what(?:'s| is) (.{2,30}?)'?s? (?:phone )?number|(?:raqam|ra2am|rakam) (.{2,30}?)(?: eh| kam)?|رقم (.{2,30}?)(?: ايه| كام)?)\??$/u);
+  if(number)return {action:'contact-find',text:(number[1]??number[2]??number[3]).trim()};
+  const wa=text.match(/^(?:send|text|message|whatsapp|ab3at|eb3at|ib3at|ابعت|إبعت|ابعتلي)\s+(?:a\s+(?:whatsapp\s+)?message\s+)?(?:to\s+|le\s+|li\s+|l\s+|ل|لـ\s*)?(.{2,30}?)[:,]?\s+(?:(saying|that|en|enn|eny|enny|إن|ان|إني|اني|انه|قوله|2olo|olo)\s+)?["“']?(.{1,300}?)["”']?$/iu);
+  if(wa&&!/\b(?:e-?mail|mail|gmail)\b|ايميل|إيميل|بريد/iu.test(text)){const me=/^(?:إني|اني)$/u.test(wa[2]??'')?'أنا ':/^(?:eny|enny)$/i.test(wa[2]??'')?'ana ':'';return {action:'whatsapp',text:JSON.stringify({name:wa[1].replace(/^(?:to|le|li)\s+/i,'').trim(),message:me+wa[3].trim()})};}
+  const bday=digits(text).match(/^(?:(.{2,30}?)'s birthday is (?:on )?(.{3,20})|(?:3eed|3id|eid) milad (.{2,30}?) (?:yom |fe |on )?(.{3,20})|عيد ميلاد (.{2,30}?) (?:يوم |في )?(.{3,20}))$/iu);
+  if(bday)return {action:'birthday',text:JSON.stringify({name:(bday[1]??bday[3]??bday[5]).trim(),when:(bday[2]??bday[4]??bday[6]).trim()})};
+  const tr=text.match(/^(?:translate|targem|targim|ترجم|ترجملي)\s+["“']?(.{1,400}?)["”']?(?:\s+(?:to|into|l|le|lel|لل|ل|الى|إلى|لـ)\s*(english|arabic|french|german|spanish|انجليزي|إنجليزي|عربي|فرنساوي|el english|el 3araby|3araby|english|engelizy))?$/iu);
+  if(tr)return {action:'translate',text:JSON.stringify({text:tr[1].trim(),to:(tr[2]??'').toLowerCase()})};
+  // Programming (read-only): git status and today's changes of an authorized project.
+  const git=t.match(/^(?:git status|what (?:did i change|changed) today|what changed in (?:my )?code(?: today)?|git log today|eh elly et8ayar enharda)(?:\s+(?:in|for|fe|في)\s+(.{2,40}))?$/u);
+  if(git)return {action:'git',text:git[1]??''};
+  if(/^(?:i am iron ?man|i'm iron ?man|ana iron ?man|أنا ايرون مان)$/u.test(t))return {action:'easter-egg'};
   // "Show me anything": English, Franco-Arabic and Arabic. Specific show-commands above win first.
   const show=text.match(/^(?:show(?: me)?|display|put up|pull up|bring up|(?:can you |could you )?show me|let me see|e3redli|e3rdli|e3rdly|3rdli|3rdly|warini|wareeni|wareny|warrini|وريني|ورّيني|اعرض(?:لي|ي لي)?|اعرضلي|عرضلي)\s+(?:(?:about|on|a|an|the)\s+)?([^\r\n]{2,200})$/iu);
   if(show&&!/[\u0000-\u001f\u007f]/.test(show[1]))return {action:'show',text:show[1].trim().replace(/[.!?؟]+$/u,'').replace(/\s+(?:on (?:the |my )?screen|please|for me|ala el screen|3al screen|على الشاشة)$/iu,'')};

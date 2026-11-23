@@ -1109,6 +1109,7 @@ fn main() {
             egypt::quran_verse,
             egypt::media_key,
             egypt::define_word,
+            egypt::git_summary,
             mobile::mobile_reply,
             knowledge::knowledge_search,
             actions::action_prepare,
