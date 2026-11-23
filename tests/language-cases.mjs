@@ -80,7 +80,7 @@ export const COMMANDS = [
   // Memory
   ['remember my locker code is 42', 'remember', 'locker code is 42'], ['recall locker', 'recall', 'locker'],
   // Mute and voice
-  ['mute', 'mute'], ['be quiet', 'hush'], ['shut up', 'hush'], ['eskot', 'hush'], ['اسكت', 'hush'], ['i need to focus', 'focus', '0'], ['ana m7tag arkez', 'focus', '0'], ['محتاج اركز', 'focus', '0'], ['silent mode', 'focus', '0'], ['unmute', 'unmute'], ['etkalem', 'unmute'], ['اتكلم', 'unmute'],
+  ['open my courses folder', 'courses'], ['efta7 el mawad', 'courses'], ['افتح المحاضرات', 'courses'], ['mute', 'mute'], ['be quiet', 'hush'], ['shut up', 'hush'], ['eskot', 'hush'], ['اسكت', 'hush'], ['i need to focus', 'focus', '0'], ['ana m7tag arkez', 'focus', '0'], ['محتاج اركز', 'focus', '0'], ['silent mode', 'focus', '0'], ['unmute', 'unmute'], ['etkalem', 'unmute'], ['اتكلم', 'unmute'],
   // Wake
   ['jarvis', 'wake', 'instant'], ['wake up jarvis', 'wake'], ['good morning jarvis', 'wake'],
   // Briefing and status

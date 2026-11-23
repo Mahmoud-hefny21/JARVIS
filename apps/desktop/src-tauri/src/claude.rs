@@ -54,7 +54,7 @@ pub fn prepare(
     memories: &[String],
 ) -> Result<(Value, String, Vec<Value>)> {
     let config = crate::integrations::settings(app)?;
-    if messages.len() > 20 || memories.len() > 6 || memories.iter().any(|m| m.len() > 6000) {
+    if messages.len() > 20 || memories.len() > 10 || memories.iter().any(|m| m.len() > 6000) {
         return Err("Context exceeds privacy limits".into());
     }
     let mut turns: Vec<Value> = Vec::new();

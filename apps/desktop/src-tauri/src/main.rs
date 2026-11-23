@@ -14,6 +14,7 @@ mod mobile;
 mod intelligence;
 mod capture;
 mod offline_speech;
+mod brain;
 mod ollama;
 mod placement;
 mod push;
@@ -1129,6 +1130,11 @@ fn main() {
             egypt::define_word,
             egypt::git_summary,
             idle_seconds,
+            brain::web_search_cmd,
+            brain::courses_index_cmd,
+            brain::courses_search_cmd,
+            brain::courses_open,
+            brain::answer_review,
             voiceid::voiceid_status,
             voiceid::voiceid_enroll_clip,
             voiceid::voiceid_enroll_finish,
