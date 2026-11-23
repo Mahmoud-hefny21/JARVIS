@@ -145,7 +145,11 @@ export function localIntent(input: string): { action: string; text?: string } | 
   if (done && done[1].trim()) return { action: 'task-done', text: done[1].trim() };
   // "Mute" / "stop talking": silence immediately, wherever it is heard.
   if (/^(?:un-?mute|unmute yourself|you can talk|talk again|speak again|etkalem|itkalam|اتكلم)$/u.test(t)) return { action: 'unmute' };
-  if (/^(?:mute|be quiet|quiet|shut up|silence|stop talking|stop|enough|hush|اسكت|بس اسكت|خلاص اسكت|uskut|eskot)$/u.test(t)) return { action: 'mute' };
+  // "Mute": no voice until "unmute" (replies still on screen, still listening). "Shut up": stop the sentence now, keep listening.
+  if (/^(?:mute|mute yourself|mute jarvis|voice off|ektem sotak|اكتم صوتك|اتكتم)$/u.test(t)) return { action: 'mute' };
+  if (/^(?:be quiet|quiet|shut up|silence|stop talking|stop|enough|hush|اسكت|بس اسكت|خلاص اسكت|بس|uskut|eskot|osko?t|bas|khalas eskot)$/u.test(t)) return { action: 'hush' };
+  // "I need to focus": silent mode, no voice and no listening until he calls "JARVIS" or ends it.
+  if (/^(?:i need to focus|let me focus|silent mode|go silent|(?:ana )?(?:m7tag|me7tag|mehtag|7a?ab2a?) a?ra?kk?e?z|(?:انا |أنا )?محتاج (?:اركز|أركز)|سيبني اركز|خليك صامت)$/u.test(t)) return { action: 'focus', text: '0' };
   // "Open my WhatsApp Web (in Chrome)": well-known sites by name; anything else goes to the AI, which answers with the address.
   const siteMatch = t.match(/^(?:open|launch|go to|bring up|pull up|start)\s+(?:up\s+)?(?:my\s+|the\s+)?(.+?)(?:\s+(?:web|website|site|page))?(?:\s+(?:in|on|from|with)\s+(?:my\s+)?(?:chrome|the browser|browser|edge))?$/);
   if (siteMatch) { const url = siteUrl(siteMatch[1]); if (url) return { action: 'site', text: url }; }

@@ -162,7 +162,7 @@ function spokenSummary(text:string,limit:number){const clean=text.replace(/[*#`>
 // Timestamped voice stages in the activity log, for diagnosing latency.
 function voiceLog(stage:string){void state.activity('Voice: '+stage,new Date().toISOString());}
 // Commands the AI may run on the user's behalf after understanding free speech (all reversible or allowlisted).
-const AUTO_ACTIONS=new Set(['unmute','mute','site','working-on','wake','pod','task','task-delete','task-done','remember','recall','app-window','monitor','chrome','vscode','briefing','status','preference']);
+const AUTO_ACTIONS=new Set(['unmute','mute','hush','site','working-on','wake','pod','task','task-delete','task-done','remember','recall','app-window','monitor','chrome','vscode','briefing','status','preference']);
 let pendingAction='';
 // Private mode: no listening and no window awareness until Mahmoud turns it off (kept across restarts).
 let privateMode=(()=>{try{return localStorage.getItem('jarvis-private')==='1';}catch{return false;}})();
@@ -490,7 +490,8 @@ async function answer(input:string,task?:UserTask,directVoiceRequest=false) {
     else if(intent?.action==='wake'){if(intent.text==='instant')response='Yes, sir?';else{await cinematicWake();return;}}
     else if(intent?.action==='working-on'){response=workingOn();}
     else if(intent?.action==='unmute'){setMuted(false);response='I’m back, sir.';}
-    else if(intent?.action==='mute'){setMuted(true);muteRequested=true;replyEpoch++;await command('speech_stop').catch(()=>undefined);sound.stop('music',0);sound.stop('wake',0);return;}
+    else if(intent?.action==='mute'){setMuted(true);toast('Muted, sir. I\'m still listening; say “unmute” to hear me again.');return;}
+    else if(intent?.action==='hush'){speechRequest++;replyEpoch++;await command('speech_stop').catch(()=>undefined);sound.stop('music',0);sound.stop('wake',0);return;}
     else if(intent?.action==='site'){pendingAction='open '+intent.text;mobileReply='Opening '+new URL(intent.text!).hostname.replace(/^(?:www|web|open)\./,'').split('.')[0].replace(/^./,c=>c.toUpperCase())+', sir.';return;}
     else if(intent?.action==='pod'){response=podSummary(intent.text!);flashPod(intent.text==='weather'?'comms':intent.text!);const card=localDisplay({tasks:'tasks',comms:'emails',weather:'weather',next:'schedule'}[intent.text!]??'');if(card)fillDisplay(card.title,card.html);}
     else if(intent?.action==='task-delete'||intent?.action==='task-done'){const open=state.list('task').filter(t=>!t.done);const hit=matchTask(intent.text??'',open);
@@ -582,9 +583,10 @@ async function answer(input:string,task?:UserTask,directVoiceRequest=false) {
       fillDisplay('Tomorrow','<ul class="dsp-list">'+[...events.map(e=>'<li><b>'+esc(e.title)+'</b><span>'+new Date(e.dueAt).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+'</span></li>'),...tasks.map(t=>'<li><b>'+esc(t.title)+'</b><span>'+new Date(t.dueAt).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+'</span></li>')].join('')+'</ul><p class="dsp-empty">Fajr '+fajr+(alarm?' · alarm '+new Date(alarm.at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):' · no alarm set')+'</p>');
       prayerQuietUntil=Math.max(prayerQuietUntil,Date.now()+30*60000);
       const count=tasks.length+events.length;response=wantsEgyptianArabic(input)?'تصبح على خير يا فندم. بكرة عندك '+(count?count+' حاجات':'يوم فاضي')+'، والفجر الساعة '+fajr+(alarm?'، والمنبه الساعة '+new Date(alarm.at).toLocaleTimeString('ar-EG',{hour:'numeric',minute:'2-digit'}):'')+'.':'Good night, sir. Tomorrow you have '+(count?count+' thing'+(count>1?'s':''):'a free day')+'; Fajr is at '+fajr+(alarm?' and your alarm is set for '+new Date(alarm.at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'')+'.';}
+    else if(intent?.action==='focus'&&intent.text==='0'){focusSilent=true;focusUntil=Date.now()+12*3600000;prayerQuietUntil=Math.max(prayerQuietUntil,focusUntil);hudAlert(wantsEgyptianArabic(input)?'وضع التركيز: هسكت ومش هسمع غير لما تقول "جارفيس".':'Focus mode: silent until you say “JARVIS”, sir.');setMuted(true);muteRequested=true;return;}
     else if(intent?.action==='focus'){const mins=Math.max(5,Math.min(240,Number(intent.text)));focusUntil=Date.now()+mins*60000;addClock({id:crypto.randomUUID(),kind:'timer',at:focusUntil,name:'focus'});prayerQuietUntil=Math.max(prayerQuietUntil,focusUntil);
       response=wantsEgyptianArabic(input)?'تمام يا فندم، '+mins+' دقيقة تركيز. مش هقاطعك غير للصلاة والمنبه.':'Focus for '+mins+' minutes, sir. I\'ll stay quiet except for prayer and alarms.';}
-    else if(intent?.action==='focus-end'){focusUntil=0;prayerQuietUntil=Date.now();clocks=clocks.filter(c=>c.name!=='focus');saveClocks();response=wantsEgyptianArabic(input)?'خلصنا التركيز يا فندم.':'Focus ended, sir.';}
+    else if(intent?.action==='focus-end'){focusUntil=0;if(focusSilent){focusSilent=false;setMuted(false);}prayerQuietUntil=Date.now();clocks=clocks.filter(c=>c.name!=='focus');saveClocks();response=wantsEgyptianArabic(input)?'خلصنا التركيز يا فندم.':'Focus ended, sir.';}
     else if(intent?.action==='study-summary'){const doc=await command<{text:string}>('document_read');const text=String(doc?.text??'').trim();if(text.length<40)throw new Error('I couldn’t read text from that file, sir.');
       studyText=text.slice(0,24000);try{localStorage.setItem('jarvis-study',studyText);}catch{}
       const summary=await brainAsk('Summarize this lecture for a university student. Use short markdown: "## Key points" bullets, "## Definitions" bullets, "## Likely exam questions" (3). Keep it under 300 words.'+(wantsEgyptianArabic(input)?' Write in Egyptian Arabic.':''),studyText);
@@ -673,7 +675,7 @@ async function answer(input:string,task?:UserTask,directVoiceRequest=false) {
       if(act&&understood&&AUTO_ACTIONS.has(understood.action)){learnPhrase(input,act[1]);pendingAction=act[1];return;}
       if(act&&/^open https:\/\/[^\s]+$/i.test(act[1].trim())){pendingAction=act[1].trim();return;}}
     else response='I’m available for local commands, tasks, memories, and briefings. Advanced conversation needs an optional AI provider in Settings. No model is running in the background.';
-    if(displayEpoch===cardBefore&&intent?.action!=='wake'&&!/^(?:media|volume|timer|alarm|mute|unmute)$/.test(intent?.action??''))closeDisplay(); // moved on: the old card goes away
+    if(displayEpoch===cardBefore&&intent?.action!=='wake'&&!/^(?:media|volume|timer|alarm|mute|unmute|hush)$/.test(intent?.action??''))closeDisplay(); // moved on: the old card goes away
     await state.add('message',{title:'JARVIS',body:response.slice(0,32000),role:'assistant'});hudAnswer(response);mobileReply=response;if(!mobileTurn&&shouldSpeakResponse(state.settings,directVoiceRequest)){try{const epoch=replyEpoch;const early=earlySpeech;streamSpeak=false;earlySpeech=null;if(early)await early;const rest=early&&response.startsWith(earlySpoken)?response.slice(earlySpoken.length).trim():response;earlySpoken='';const spoken=spokenSummary(rest,early?220:320);if(spoken&&epoch===replyEpoch)await speak(spoken); /* skipped when interrupted or muted */}catch(error){toast('Speech failed: '+String(error));}}
   } catch(error) {
     const failure=spokenFailureMessage(error);
@@ -750,7 +752,7 @@ function parseJsonArray(raw:string):unknown[]{const m=raw.match(/\[[\s\S]*\]/);i
 type Clock={id:string;kind:'timer'|'alarm';at:number;name:string};
 const CLOCKS_KEY='jarvis-clocks-v1';
 let clocks:Clock[]=(()=>{try{return (JSON.parse(localStorage.getItem(CLOCKS_KEY)??'[]') as Clock[]).filter(c=>c.at>Date.now()-3600000);}catch{return [];}})();
-let focusUntil=0,ringing:ReturnType<typeof setInterval>|undefined;
+let focusSilent=false,focusUntil=0,ringing:ReturnType<typeof setInterval>|undefined;
 function saveClocks(){try{localStorage.setItem(CLOCKS_KEY,JSON.stringify(clocks));}catch{}}
 function addClock(c:Clock){clocks=[...clocks,c].sort((a,b)=>a.at-b.at);saveClocks();}
 function stopRinging(){if(ringing){clearInterval(ringing);ringing=undefined;}sound.stop('music',300);}
@@ -999,21 +1001,23 @@ async function cinematicWake(){
 let voiceSession=false,pendingCapture:Promise<string>|null=null,muteRequested=false;
 // Bumped by "JARVIS"-interrupts and "mute": queued pieces of the current reply are dropped instead of spoken.
 let replyEpoch=0;
-const ATTENTION_MS=60000;
+const ATTENTION_MS=60000,PRESENT_S=180;
 async function converse(){
   if(!native||!desiredWake||conversing)return;
   conversing=true;voiceSession=true;
   try{
-    // Stays with the user for a full minute of silence (like someone sitting next to you), then idles until "JARVIS".
+    // Keeps listening while he is at the laptop (keyboard or mouse used in the last few minutes), or for the
+    // conversation window after he last spoke; once he walks away it idles until "JARVIS".
     let lastHeard=Date.now();
-    while(desiredWake&&Date.now()-lastHeard<Math.max(ATTENTION_MS,(state.settings.conversationMinutes??5)*60000)){
+    const present=async()=>{try{return (await command<number>('idle_seconds'))<PRESENT_S;}catch{return false;}};
+    while(desiredWake&&!focusSilent&&(Date.now()-lastHeard<Math.max(ATTENTION_MS,(state.settings.conversationMinutes??5)*60000)||await present())){
       const request=++speechRequest;activeVoiceId='';await command('voice_stop');voiceMode='ptt';aiState='Listening';render();
       let text='';voiceLog('follow-up recording');
       try{const capture=pendingCapture??command<string>('speech_microphone',{followUp:true});pendingCapture=null;text=(await capture).trim();showCaption(text);voiceLog('follow-up transcript ready');}
       catch(error){if(/no audible speech|catch that/i.test(String(error))&&request===speechRequest)continue;if(!/cancelled/i.test(String(error)))void state.activity('Voice follow-up stopped',String(error).slice(0,300));break;}
       finally{voiceMode='';}
       if(text)lastHeard=Date.now();
-      if(request!==speechRequest||!text||/^(stop|thanks|thank you|that'?s all|that is all|that'?ll be all|that will be all|goodbye|never ?mind|mute|be quiet|quiet|shut up|silence|enough|شكرا|خلاص|اسكت|بس)\b/i.test(text.replace(/^jarvis[,. ]*/i,''))){await command('speech_stop').catch(()=>{});break;}
+      if(request!==speechRequest||!text||/^(stop|thanks|thank you|that'?s all|that is all|that'?ll be all|that will be all|goodbye|never ?mind|شكرا|مع السلامة)\b/i.test(text.replace(/^jarvis[,. ]*/i,''))){await command('speech_stop').catch(()=>{});break;}
       try{await runUserText(text,{isTrusted:true},true);if(muteRequested){muteRequested=false;break;}}catch(error){void state.activity('Voice request failed',String(error).slice(0,300));break;}
     }
   }finally{conversing=false;voiceSession=false;pendingCapture=null;aiState='Ready';render();
@@ -1148,7 +1152,10 @@ async function init() {
     await listen<{type:string;session?:string;text?:string;reason?:string;level?:number;error?:string;confidence?:number;fallback?:boolean;language?:string;requestedLanguage?:string}>('voice',event=>{const value=event.payload;if(value.session!==activeVoiceId)return;if(value.type==='wake'){wakeRestarts=0;const said=(value.text??'').toLowerCase();
       // "Mute" / "unmute" act the instant they are heard, even while JARVIS is talking.
       if(/unmute/.test(said)){if((value.confidence??1)<0.5)return;voiceLog('unmuted');setMuted(false);void speak('I’m back, sir.');return;}
-      if(/mute/.test(said)){if((value.confidence??1)<0.5)return;voiceLog('muted');setMuted(true);muteRequested=conversing;toast('Muted. Say “unmute” to hear me again.');return;}
+      if(/mute/.test(said)){if((value.confidence??1)<0.5)return;voiceLog('muted');setMuted(true);toast('Muted, sir. I\'m still listening; say “unmute” to hear me again.');return;}
+      if(/shut up|stop|enough/.test(said)){if((value.confidence??1)<0.6)return;voiceLog('hushed');speechRequest++;replyEpoch++;void command('speech_stop').catch(()=>undefined);return;}
+      // Called by name during focus mode: focus is over.
+      if(focusSilent){focusSilent=false;setMuted(false);}
       // JARVIS's own voice can sound like its name to the recognizer; while it speaks, accept only a confident match.
       if((aiState==='Speaking'||Date.now()-lastSpokeAt<2000)&&(value.confidence??1)<0.8){voiceLog('wake word ignored: own voice');return;}
       // Already recording the user: a second "JARVIS" must not cancel and restart the capture (that dropped requests).

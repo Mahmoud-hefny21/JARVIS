@@ -80,7 +80,7 @@ export const COMMANDS = [
   // Memory
   ['remember my locker code is 42', 'remember', 'locker code is 42'], ['recall locker', 'recall', 'locker'],
   // Mute and voice
-  ['mute', 'mute'], ['be quiet', 'mute'], ['eskot', 'mute'], ['اسكت', 'mute'], ['unmute', 'unmute'], ['etkalem', 'unmute'], ['اتكلم', 'unmute'],
+  ['mute', 'mute'], ['be quiet', 'hush'], ['shut up', 'hush'], ['eskot', 'hush'], ['اسكت', 'hush'], ['i need to focus', 'focus', '0'], ['ana m7tag arkez', 'focus', '0'], ['محتاج اركز', 'focus', '0'], ['silent mode', 'focus', '0'], ['unmute', 'unmute'], ['etkalem', 'unmute'], ['اتكلم', 'unmute'],
   // Wake
   ['jarvis', 'wake', 'instant'], ['wake up jarvis', 'wake'], ['good morning jarvis', 'wake'],
   // Briefing and status
@@ -95,7 +95,7 @@ export const COMMANDS = [
 export const CHAT = [
   'ezayak ya jarvis', 'إزيك يا جارفيس', 'what is the capital of japan', 'a3mel eh 3ashan azaker ahsan?', 'ana 3andy eh bokra?', 'how do i open a file in python',
   'why is the sky blue', 'tell me a joke', 'el gaw 3amel eh enharda?', 'explain recursion', 'ازاي اذاكر احسن', 'what should i focus on today',
-  'ana 3ayz azaker ahsan', 'i want to sleep early today', 'عايز اعرف الساعة كام', 'i need to focus', 'i want to be better at math', '3ayz a3raf el gaw 3amel eh',
+  'ana 3ayz azaker ahsan', 'i want to sleep early today', 'عايز اعرف الساعة كام', 'i want to be better at math', '3ayz a3raf el gaw 3amel eh',
   'send an email to ahmed', 'close chrome', 'remove the background from this photo please', 'how are you', 'can you help me with my essay', 'ma3lesh ana ta3ban', 'thank you jarvis', 'shokran', 'شكرا يا جارفيس',
 ];
 

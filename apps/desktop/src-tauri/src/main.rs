@@ -91,6 +91,17 @@ fn confirmed(app: &tauri::AppHandle, title: &str, body: &str) -> bool {
     }
 }
 /// Reports each Voice ID decision's score to the window, which logs it as activity for tuning.
+/// Seconds since the last keyboard or mouse input: tells JARVIS whether its owner is still at the laptop.
+#[tauri::command]
+fn idle_seconds() -> u64 {
+    use windows_sys::Win32::System::SystemInformation::GetTickCount;
+    use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetLastInputInfo, LASTINPUTINFO};
+    let mut info = LASTINPUTINFO { cbSize: std::mem::size_of::<LASTINPUTINFO>() as u32, dwTime: 0 };
+    if unsafe { GetLastInputInfo(&mut info) } == 0 {
+        return u64::MAX;
+    }
+    (unsafe { GetTickCount() }.wrapping_sub(info.dwTime) / 1000) as u64
+}
 fn voiceid_log(app: &tauri::AppHandle, similarity: f32, threshold: f32) -> Result<()> {
     // Scores only (never audio), so the threshold can be tuned from real use.
     let _ = app.emit("voiceid-score", json!({"similarity": similarity, "threshold": threshold, "accepted": similarity >= threshold}));
@@ -1117,6 +1128,7 @@ fn main() {
             egypt::media_key,
             egypt::define_word,
             egypt::git_summary,
+            idle_seconds,
             voiceid::voiceid_status,
             voiceid::voiceid_enroll_clip,
             voiceid::voiceid_enroll_finish,
