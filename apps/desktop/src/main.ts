@@ -646,10 +646,10 @@ async function answer(input:string,task?:UserTask,directVoiceRequest=false) {
       try{for(let i=0;i<lines.length;i++){fillDisplay('Learning your voice · '+(i+1)+' of '+lines.length,'<p class="dsp-sub">Read this aloud in your normal voice:</p><p class="dsp-big" dir="auto" style="font-size:26px">'+esc(lines[i])+'</p><p class="dsp-empty">Only a voice fingerprint is kept on this laptop, never the recordings.</p>');
           if(i===0)await speak('Read each sentence on the screen in your normal voice, sir.').catch(()=>{});
           let ok=false;for(let attempt=0;attempt<2&&!ok;attempt++){try{await command('voiceid_enroll_clip',{first:i===0&&attempt===0});ok=true;}catch(error){if(attempt===1)throw error;await speak('I didn\'t catch that, sir. Once more, please.').catch(()=>{});}}}
-        const r=await command<{threshold:number;ownScores:number[]}>('voiceid_enroll_finish');closeDisplay();
+        const r=await command<{threshold:number;ownScores:number[]}>('voiceid_enroll_finish');await refreshVoiceId();closeDisplay();
         response=wantsEgyptianArabic(input)?'تمام يا فندم، اتعلمت صوتك. من دلوقتي هسمعك إنت بس.':'Done, sir. I know your voice now, and I\'ll only listen to you.';void state.activity('Voice ID enrolled','threshold '+r.threshold.toFixed(2)+'; own scores '+r.ownScores.map(x=>x.toFixed(2)).join(', '));}
       finally{if(wasListening){desiredWake=true;await resumeWake().catch(()=>{});}}}
-    else if(intent?.action==='voice-lock'){await command('voiceid_enable',{enabled:intent.text==='on'});response=intent.text==='on'?(wantsEgyptianArabic(input)?'حاضر يا فندم، هسمعك إنت بس.':'Understood, sir. I\'ll only listen to you.'):(wantsEgyptianArabic(input)?'تمام، هسمع الكل.':'All right, sir. I\'ll listen to everyone.');}
+    else if(intent?.action==='voice-lock'){await command('voiceid_enable',{enabled:intent.text==='on'});await refreshVoiceId();response=intent.text==='on'?(wantsEgyptianArabic(input)?'حاضر يا فندم، هسمعك إنت بس.':'Understood, sir. I\'ll only listen to you.'):(wantsEgyptianArabic(input)?'تمام، هسمع الكل.':'All right, sir. I\'ll listen to everyone.');}
     else if(intent?.action==='show')response=await showOnScreen(intent.text!);
     else if(intent?.action==='show-close'){closeDisplay();response='Cleared, sir.';}
     else if(intent){await performAction(intent.action,task);response='The Windows action was accepted. Disruptive actions require your confirmation.';}
@@ -676,10 +676,15 @@ async function answer(input:string,task?:UserTask,directVoiceRequest=false) {
 // Floating reply panel: answers appear over whatever page is open, so the dashboard never has to change.
 let hudTimer:ReturnType<typeof setTimeout>|undefined;
 // The AI's only source of truth about the user's day; without it the model invented tasks and plans.
+// Voice ID state, so JARVIS answers honestly about who it listens to; refreshed at start and on every change.
+let voiceIdOn:boolean|null=null;
+async function refreshVoiceId(){if(!native)return;try{voiceIdOn=(await command<{enabled:boolean;enrolled:boolean}>('voiceid_status')).enabled;}catch{}}
+void refreshVoiceId();
+const voiceFact=()=>voiceIdOn===true?'VOICE ID IS ON: you only act on the owner\'s own voice; other people\'s voices (family, friends, videos, TV) are ignored and get no answer. Typed messages on his laptop and his private phone app are trusted as him. ':voiceIdOn===false?'VOICE ID IS OFF: you currently answer anyone who speaks; he can say "listen only to me" to turn it on. ':'';
 function liveFacts(){const now=Date.now(),fmt=(d:string)=>new Date(d).toLocaleString([],{weekday:'short',hour:'numeric',minute:'2-digit'});
   const tasks=state.list('task').filter(t=>!t.done).slice(0,25).map(t=>t.title+(t.dueAt?' (due '+fmt(t.dueAt)+')':''));
   const events=state.list('event').filter(e=>e.dueAt&&Date.parse(e.dueAt)>now-3600000&&Date.parse(e.dueAt)<now+7*86400000).sort((a,b)=>a.dueAt.localeCompare(b.dueAt)).slice(0,15).map(e=>e.title+' ('+fmt(e.dueAt)+')');
-  return `LIVE DATA (complete and authoritative). Open tasks: ${tasks.length?tasks.join('; '):'none'}. Calendar next 7 days: ${events.length?events.join('; '):'nothing scheduled'}. User is viewing the ${page} page.${windowLog.length?` Recent windows (newest first, local awareness): ${[...windowLog].reverse().slice(0,5).map(e=>appName(e.app)+' — '+cleanTitle(e).slice(0,70)).join('; ')}.`:''}`.slice(0,5800);}
+  return `${voiceFact()}LIVE DATA (complete and authoritative). Open tasks: ${tasks.length?tasks.join('; '):'none'}. Calendar next 7 days: ${events.length?events.join('; '):'nothing scheduled'}. User is viewing the ${page} page.${windowLog.length?` Recent windows (newest first, local awareness): ${[...windowLog].reverse().slice(0,5).map(e=>appName(e.app)+' — '+cleanTitle(e).slice(0,70)).join('; ')}.`:''}`.slice(0,5800);}
 function hudShow(question:string){if(page==='chat')return;const el=document.querySelector<HTMLElement>('#hud-reply');if(!el)return;watchReply(el);clearTimeout(hudTimer);el.hidden=false;el.classList.remove('done');el.querySelector('.hud-you')!.textContent=question;el.querySelector('.hud-jarvis')!.innerHTML='<span class="hud-thinking"><i></i><i></i><i></i></span>';}
 function hudAnswer(text:string,streaming=false){if(page==='chat')return;const el=document.querySelector<HTMLElement>('#hud-reply');if(!el||el.hidden)return;el.querySelector('.hud-jarvis')!.textContent=text.replace(/[*#`]+/g,'').slice(0,700);clearTimeout(hudTimer);if(!streaming){el.classList.add('done');hudTimer=setTimeout(()=>{el.hidden=true;},Math.min(25000,6000+text.length*45));}}
 // Live alerts: the most important things right now, recomputed from local data on every refresh.
