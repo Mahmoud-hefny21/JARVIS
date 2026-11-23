@@ -1231,10 +1231,10 @@ async function init() {
     await listen<{type:string;session?:string;text?:string;reason?:string;level?:number;error?:string;confidence?:number;fallback?:boolean;language?:string;requestedLanguage?:string}>('voice',event=>{const value=event.payload;if(value.session!==activeVoiceId)return;if(value.type==='wake'){wakeRestarts=0;const said=(value.text??'').toLowerCase();
       // "Mute" / "unmute" act the instant they are heard, even while JARVIS is talking.
       if(/unmute/.test(said)){if((value.confidence??1)<0.5)return;voiceLog('unmuted');setMuted(false);void speak('I’m back, sir.');return;}
-      if(/mute/.test(said)){if((value.confidence??1)<0.5)return;voiceLog('muted');setMuted(true);toast('Muted, sir. I\'m still listening; say “unmute” to hear me again.');return;}
+      if(/mute/.test(said)){if((value.confidence??1)<0.85)return;voiceLog('muted');setMuted(true);toast('Muted, sir. I\'m still listening; say “unmute” to hear me again.');return;}
       if(/shut up|stop|enough/.test(said)){if((value.confidence??1)<0.6)return;voiceLog('hushed');speechRequest++;replyEpoch++;void command('speech_stop').catch(()=>undefined);return;}
-      // Called by name during focus mode: focus is over.
-      if(focusSilent){focusSilent=false;setMuted(false);}
+      // Called by name: he wants to talk, so focus mode and mute end (a misheard "mute" must never leave JARVIS silent).
+      if(focusSilent)focusSilent=false;if(muted){setMuted(false);voiceLog('unmuted by name');}
       // JARVIS's own voice can sound like its name to the recognizer; while it speaks, accept only a confident match.
       if((aiState==='Speaking'||Date.now()-lastSpokeAt<2000)&&(value.confidence??1)<0.8){voiceLog('wake word ignored: own voice');return;}
       // Already recording the user: a second "JARVIS" must not cancel and restart the capture (that dropped requests).

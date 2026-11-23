@@ -165,9 +165,9 @@ pub async fn voiceid_enroll_finish(app: tauri::AppHandle) -> Result<Value> {
     mean.iter_mut().for_each(|x| *x /= n);
     let own: Vec<f32> = all.iter().map(|c| cosine(&mean, c)).collect();
     let weakest = own.iter().cloned().fold(1.0f32, f32::min);
-    // Accept anything close to the owner's weakest enrollment clip; other voices scored ≤ 0.46 in tests.
+    // Accept anything close to the owner's weakest enrollment clip; other voices scored ≤ 0.1 in real use; his live speech 0.38-0.64.
     // Live speech scores lower than the enrollment clips (distance, noise): keep the bar well below them.
-    let threshold = (weakest - 0.35).clamp(0.45, 0.52);
+    let threshold = (weakest - 0.5).clamp(0.33, 0.40);
     let state = app.state::<crate::NativeState>();
     state.db.lock().map_err(|_| "Database unavailable")?.set_value(
         "voiceprint",
