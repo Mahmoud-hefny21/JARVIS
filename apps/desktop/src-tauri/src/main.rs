@@ -15,6 +15,7 @@ mod intelligence;
 mod capture;
 mod offline_speech;
 mod brain;
+mod watch;
 mod pc;
 mod ollama;
 mod placement;
@@ -1022,6 +1023,7 @@ fn main() {
             runtime::start(app.handle().clone());
             if qa_dir.is_none() {
                 mobile::start(app.handle().clone());
+                watch::start(app.handle().clone());
                 let handle = app.handle().clone();
                 std::thread::spawn(move || {
                     knowledge::space_guard(&handle);
@@ -1137,6 +1139,10 @@ fn main() {
             brain::courses_open,
             brain::answer_review,
             pc::pc_control,
+            watch::screens_now,
+            watch::journal_range,
+            watch::journal_pause,
+            watch::journal_clear,
             pc::files_find,
             pc::file_open_found,
             pc::money_get,
