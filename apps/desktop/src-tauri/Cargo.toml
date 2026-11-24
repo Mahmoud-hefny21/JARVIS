@@ -22,9 +22,14 @@ sysinfo = "0.33"
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
 base64 = "0.22"
 sha2 = "0.10"
+p256 = { version = "0.13", features = ["ecdh", "ecdsa"] }
+hkdf = "0.12"
+aes-gcm = "0.10"
+tract-onnx = "0.21"
+rustfft = "6"
 zeroize = "1"
 url = "2"
-windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_Media", "Win32_Media_Audio", "Win32_Security_Cryptography", "Win32_System_Memory", "Win32_System_Power", "Win32_System_Threading", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_Media", "Win32_Media_Audio", "Win32_Security_Credentials", "Win32_Security_Cryptography", "Win32_System_Memory", "Win32_System_Power", "Win32_System_Recovery", "Win32_System_SystemInformation", "Win32_System_Threading", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
 
 [profile.release]
 opt-level = "s"

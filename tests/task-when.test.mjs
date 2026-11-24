@@ -93,7 +93,8 @@ test('open websites by name, and mute', () => {
   assert.equal(localIntent('open youtube').text, 'https://www.youtube.com');
   assert.equal(localIntent('open chrome').action, 'chrome');
   assert.equal(siteUrl('some unknown thing'), null);
-  for (const said of ['Mute.', 'Jarvis, mute', 'stop talking', 'اسكت']) assert.deepEqual(localIntent(said), { action: 'mute' }, said);
+  for (const said of ['Mute.', 'Jarvis, mute']) assert.deepEqual(localIntent(said), { action: 'mute' }, said);
+  for (const said of ['stop talking', 'shut up', 'اسكت']) assert.deepEqual(localIntent(said), { action: 'hush' }, said);
 });
 import { translateCommandWords } from '../packages/shared/model.ts';
 test('Franco and Arabic command words', () => {

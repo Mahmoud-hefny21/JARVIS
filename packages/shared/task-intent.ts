@@ -17,6 +17,16 @@ export function directScopes(input:string,context:{currentId?:string|null;previo
   if(/\b(?:hide|clear) (?:everything|all panels|all widgets)|\b(?:restore|show|bring back) (?:everything|all panels|overview panels)|\b(?:keep|pin) (?:this|that|it) visible|\b(?:put|move) (?:this|that|it) (?:on|to) (?:the )?(?:left|right)\b|\b(?:show|focus|bring up|add|open) (?:me )?(?:my )?(?:recent )?(?:cpu|ram|system resources|system monitor|metrics|project|projects|project progress|tasks|reminders|schedule|briefing|security|profile|development tools|activity)(?: panel)?(?: in| on)?(?: the)? overview?\b|\b(?:hide|remove|close) (?:the )?(?:recent )?activity(?: panel)? from (?:the )?overview\b|(?:اخفي.*(?:كل|الكل)|(?:رجع|اظهر|اعرض).*(?:اللوحات|كل حاجه)|(?:خلي|سيب).*(?:ده|دي|دا).*(?:ظاهر|باين)|(?:حط|انقل).*(?:ده|دي|دا).*(?:يمين|شمال))/.test(text))return [{action:'settings_save',resource:'preferences'}];
   if(/\b(don't|do not|never|cancel|stop)\b|متفتحش|ما تفتحش|مش عايز/.test(text))return [];
   if(intent?.action==='task'||intent?.action==='remember')return [{action:'record_put',resource:'new:'+(intent.action==='task'?'task':'memory')}];
+  // The shopping list is one note: created the first time, then only its lines change (see action_policy.rs).
+  // Contacts and birthdays are saved as notes; a WhatsApp message is only prepared (WhatsApp waits for Send).
+  if(intent?.action==='contact-save'||intent?.action==='birthday')return [{action:'record_put',resource:'new:memory'}];
+  if(intent?.action==='whatsapp')return [{action:'open_website',resource:'whatsapp-send'}];
+  if(intent?.action==='directions')return [{action:'open_website',resource:'maps-route'}];
+  if(intent?.action==='play')return [{action:'open_website',resource:'youtube-search'}];
+  if(intent?.action==='summarize-page')return [{action:'browser_page_read',resource:'browser-active'}];
+  // An exam: one new calendar event plus up to three study reminders.
+  if(intent?.action==='exam')return [{action:'record_put',resource:'new:event'},{action:'record_put',resource:'new:task'}];
+  if(intent?.action==='shopping-add'||intent?.action==='shopping-clear')return [{action:'record_put',resource:'new:memory'},{action:'record_put',resource:'shopping-list'}];
   if(intent?.action==='monitor')return [{action:'settings_save',resource:'preferences'}];
   if(intent?.action==='workspace'){
     const preset=presets.find(p=>p.name.toLowerCase()===intent.text?.toLowerCase());

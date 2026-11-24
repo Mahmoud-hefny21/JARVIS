@@ -328,7 +328,11 @@ pub fn open(app: &tauri::AppHandle, key: Option<&str>, fullscreen: Option<bool>)
                 .map_err(|_| "Cannot exit fullscreen")?;
         }
     }
-    repair(app)?;
+    // A failed bounds repair (e.g. a maximized window) must never keep JARVIS hidden or abort startup;
+    // the placement loop retries it once the window is shown.
+    if let Err(error) = repair(app) {
+        eprintln!("placement repair: {error}");
+    }
     window.show().map_err(|_| "Cannot show JARVIS")?;
     window.set_focus().map_err(|_| "Cannot focus JARVIS")?;
     state.dirty.store(true, Ordering::SeqCst);

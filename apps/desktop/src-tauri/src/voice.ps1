@@ -31,7 +31,7 @@ public class JarvisVoice {
     if(info == null) throw new Exception("No offline Windows recognizer is installed for " + language + ". Installed recognizers: " + (installed.Length == 0 ? "none" : String.Join(", ", installed.Select(candidate => candidate.Culture.Name))) + ". Install a Windows speech recognition language pack, then restart JARVIS.");
     using(var engine = new SpeechRecognitionEngine(info)) {
       bool wake = mode == "wake" || mode == "wake-whisper" || mode == "wake-interrupt";
-      var builder = new GrammarBuilder(); builder.Culture=info.Culture; builder.Append(new Choices("JARVIS", "hey JARVIS", "OK JARVIS", "wake up JARVIS", "JARVIS wake up", "good morning JARVIS", "JARVIS are you there"));
+      var builder = new GrammarBuilder(); builder.Culture=info.Culture; builder.Append(new Choices("JARVIS", "hey JARVIS", "OK JARVIS", "wake up JARVIS", "JARVIS wake up", "good morning JARVIS", "JARVIS are you there", "mute", "JARVIS mute", "mute JARVIS", "JARVIS shut up", "JARVIS stop", "shut up JARVIS", "unmute", "JARVIS unmute", "unmute JARVIS"));
       var keyword = new Grammar(builder); keyword.Enabled=wake;
       var dictation = new DictationGrammar(); dictation.Enabled=!wake;
       engine.LoadGrammar(keyword); engine.LoadGrammar(dictation);

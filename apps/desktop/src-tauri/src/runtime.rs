@@ -147,6 +147,7 @@ pub fn tick(app: &tauri::AppHandle) -> Result<()> {
     drop(db);
     crate::automation::tick(app);
     for (title, body) in notifications {
+        crate::push::notify_phone(app, &title, &body);
         let _ = app.notification().builder().title(title).body(body).show();
     }
     if changed {

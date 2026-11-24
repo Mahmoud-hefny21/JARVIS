@@ -6,17 +6,25 @@ mod automation;
 mod calendar;
 mod claude;
 mod db;
+mod egypt;
 mod groq;
 mod integrations;
+mod knowledge;
+mod mobile;
 mod intelligence;
 mod capture;
 mod offline_speech;
+mod brain;
+mod watch;
+mod pc;
 mod ollama;
 mod placement;
+mod push;
 mod profiles;
 mod projects;
 mod runtime;
 mod understanding;
+mod voiceid;
 mod windows;
 use chrono::Utc;
 use db::{Database, Record, Result};
@@ -84,6 +92,23 @@ fn confirmed(app: &tauri::AppHandle, title: &str, body: &str) -> bool {
             0x0001 | 0x0030 | 0x0100 | 0x10000,
         ) == 1
     }
+}
+/// Reports each Voice ID decision's score to the window, which logs it as activity for tuning.
+/// Seconds since the last keyboard or mouse input: tells JARVIS whether its owner is still at the laptop.
+#[tauri::command]
+fn idle_seconds() -> u64 {
+    use windows_sys::Win32::System::SystemInformation::GetTickCount;
+    use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetLastInputInfo, LASTINPUTINFO};
+    let mut info = LASTINPUTINFO { cbSize: std::mem::size_of::<LASTINPUTINFO>() as u32, dwTime: 0 };
+    if unsafe { GetLastInputInfo(&mut info) } == 0 {
+        return u64::MAX;
+    }
+    (unsafe { GetTickCount() }.wrapping_sub(info.dwTime) / 1000) as u64
+}
+fn voiceid_log(app: &tauri::AppHandle, similarity: f32, threshold: f32) -> Result<()> {
+    // Scores only (never audio), so the threshold can be tuned from real use.
+    let _ = app.emit("voiceid-score", json!({"similarity": similarity, "threshold": threshold, "accepted": similarity >= threshold}));
+    Ok(())
 }
 fn grant_path(app: &tauri::AppHandle, id: &str) -> Result<PathBuf> {
     uuid::Uuid::parse_str(id).map_err(|_| "Invalid project ID")?;
@@ -488,6 +513,16 @@ fn ai_cancel(state: tauri::State<NativeState>) -> Result<()> {
 async fn weather(app: tauri::AppHandle) -> Result<Value> {
     background(move || integrations::weather(&app)).await
 }
+/// Sends a notification to the owner's subscribed iPhone (no-op when none is subscribed).
+#[tauri::command]
+fn push_notify(app: tauri::AppHandle, title: String, body: String) -> Result<()> {
+    push::notify_phone(&app, &title.chars().take(120).collect::<String>(), &body.chars().take(400).collect::<String>());
+    Ok(())
+}
+#[tauri::command]
+async fn wiki_lookup(query: String, lang: String) -> Result<Value> {
+    background(move || integrations::wiki_lookup(&query, &lang)).await
+}
 #[tauri::command]
 async fn google_connect(app: tauri::AppHandle) -> Result<()> {
     background(move || integrations::google_connect(&app)).await
@@ -809,7 +844,7 @@ fn active_window() -> Result<Option<Value>> {
 #[tauri::command]
 fn sound_asset(app: tauri::AppHandle, slot: String) -> Result<Option<String>> {
     use base64::Engine;
-    if !["wake", "activation", "music", "notify"].contains(&slot.as_str()) {
+    if !["wake", "activation", "music", "notify", "adhan"].contains(&slot.as_str()) {
         return Err("Unknown sound slot".into());
     }
     let dir = app.path().app_data_dir().map_err(|_| "App data folder unavailable")?.join("sounds");
@@ -841,6 +876,30 @@ fn speech_stop(state: tauri::State<NativeState>) -> Result<()> {
 /// Set once Piper proves too slow on this PC; later replies use the instant Windows voice.
 static PIPER_TOO_SLOW: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
+/// Crash safety for the personal instance: Windows relaunches JARVIS if it crashes after running 60 s
+/// (Restart Manager), and any panic is appended to a small error log in the data folder.
+fn crash_safety() {
+    use windows_sys::Win32::System::Recovery::RegisterApplicationRestart;
+    let args: Vec<u16> = [0u16].to_vec();
+    // SAFETY: NUL-terminated UTF-16 command line; flags 0 = restart on crash and hang.
+    unsafe { RegisterApplicationRestart(args.as_ptr(), 0) };
+    let previous = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        if let Some(dir) = std::env::var_os("APPDATA").map(|d| PathBuf::from(d).join("com.jarvis.personal").join("logs")) {
+            let _ = std::fs::create_dir_all(&dir);
+            let file = dir.join("errors.log");
+            if std::fs::metadata(&file).map(|m| m.len() > 512 * 1024).unwrap_or(false) {
+                let _ = std::fs::rename(&file, dir.join("errors.old.log"));
+            }
+            if let Ok(mut log) = std::fs::OpenOptions::new().create(true).append(true).open(&file) {
+                use std::io::Write;
+                let _ = writeln!(log, "{} panic: {info}", chrono::Local::now().to_rfc3339());
+            }
+        }
+        previous(info);
+    }));
+}
+
 fn main() {
     let flag = std::env::var_os("JARVIS_ENABLE_TEST_PROFILE");
     let enabled = flag.as_deref() == Some(std::ffi::OsStr::new("1"));
@@ -862,6 +921,9 @@ fn main() {
     });
     // Every validated QA launch is independent; never reveal a personal instance.
     let isolated_qa = qa_dir.is_some();
+    if !isolated_qa {
+        crash_safety();
+    }
     let builder = if isolated_qa {
         tauri::Builder::default()
     } else {
@@ -875,7 +937,7 @@ fn main() {
     builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
-        .plugin(tauri_plugin_autostart::Builder::new().build())
+        .plugin(tauri_plugin_autostart::Builder::new().args(["--hidden"]).build())
         .setup(move |app| {
             let dir = qa_dir.clone().unwrap_or(app.path().app_data_dir()?);
             let database = Database::open(&dir).map_err(std::io::Error::other)?;
@@ -932,10 +994,41 @@ fn main() {
                 offline_epoch: std::sync::atomic::AtomicU64::new(0),
             });
             app.manage(placement::State::default());
-            placement::open(app.handle(), None, Some(false))?;
+            // Started with Windows: stay in the tray, listening for "wake up".
+            if std::env::args().any(|a| a == "--hidden") {
+                if let Some(w) = app.get_webview_window("main") {
+                    let _ = w.hide();
+                }
+            } else {
+                placement::open(app.handle(), None, Some(false))?;
+            }
+            // One-time: start with Windows so "wake up" works even after the window is closed.
+            if qa_dir.is_none() {
+                let native_state = app.state::<NativeState>();
+                let db = &native_state.db;
+                if let Ok(db) = db.lock() {
+                    if db.get_value("wakeStartupEnabled").unwrap_or(Value::Null) != true {
+                        let mut prefs = db.get_value("preferences").unwrap_or(Value::Null);
+                        if prefs.is_object() && app.autolaunch().enable().is_ok() {
+                            prefs["autostart"] = json!(true);
+                            prefs["minimizeToTray"] = json!(true);
+                            let _ = db.set_value("preferences", &prefs);
+                            let _ = db.set_value("wakeStartupEnabled", &json!(true));
+                        }
+                    }
+                };
+            }
             placement::start(app.handle().clone());
             actions::recover(app.handle())?;
             runtime::start(app.handle().clone());
+            if qa_dir.is_none() {
+                mobile::start(app.handle().clone());
+                watch::start(app.handle().clone());
+                let handle = app.handle().clone();
+                std::thread::spawn(move || {
+                    knowledge::space_guard(&handle);
+                });
+            }
             let show =
                 tauri::menu::MenuItem::with_id(app, "show", "Open JARVIS", true, None::<&str>)?;
             let hide =
@@ -1031,6 +1124,36 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             sound_asset,
             active_window,
+            wiki_lookup,
+            push_notify,
+            egypt::egypt_rates,
+            egypt::egypt_football,
+            egypt::quran_verse,
+            egypt::media_key,
+            egypt::define_word,
+            egypt::git_summary,
+            idle_seconds,
+            brain::web_search_cmd,
+            brain::courses_index_cmd,
+            brain::courses_search_cmd,
+            brain::courses_open,
+            brain::answer_review,
+            pc::pc_control,
+            watch::screens_now,
+            watch::journal_range,
+            watch::journal_pause,
+            watch::journal_clear,
+            pc::files_find,
+            pc::file_open_found,
+            pc::money_get,
+            pc::money_put,
+            pc::news_headlines,
+            voiceid::voiceid_status,
+            voiceid::voiceid_enroll_clip,
+            voiceid::voiceid_enroll_finish,
+            voiceid::voiceid_enable,
+            mobile::mobile_reply,
+            knowledge::knowledge_search,
             actions::action_prepare,
             actions::action_execute,
             actions::action_cancel,
